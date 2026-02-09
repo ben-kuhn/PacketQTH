@@ -1,0 +1,91 @@
+# PacketQTH Configuration
+
+telnet:
+  # Address to bind to (0.0.0.0 = all interfaces, 127.0.0.1 = localhost only)
+  host: 0.0.0.0
+  
+  # Port to listen on for telnet connections
+  port: 8023
+  
+  # Maximum concurrent connections
+  max_connections: 10
+  
+  # Connection timeout in seconds
+  timeout_seconds: 300
+
+homeassistant:
+  # HomeAssistant base URL
+  url: http://homeassistant.local:8123
+  
+  # Long-lived access token (create in HA profile settings)
+  # Can also be set via HA_TOKEN environment variable
+  token: your_long_lived_access_token_here
+  
+  # API request timeout in seconds
+  timeout: 10
+  
+  # How often to refresh the entity cache (seconds)
+  cache_refresh_interval: 60
+
+display:
+  # Number of items to show per page
+  page_size: 10
+  
+  # Use ANSI colors (disable for compatibility)
+  use_colors: false
+  
+  # Show entity IDs in addition to friendly names
+  show_entity_ids: false
+
+filters:
+  # Only show entities from these domains
+  included_domains:
+    - light
+    - switch
+    - automation
+    - cover
+    - sensor
+    - climate
+    - fan
+    - lock
+  
+  # Exclude specific entities (glob patterns supported)
+  excluded_entities:
+    - sensor.uptime
+    - sensor.time
+    - sensor.*_last_boot
+  
+  # Exclude entities with these attributes
+  excluded_attributes:
+    - hidden: true
+    - disabled: true
+
+logging:
+  # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  level: INFO
+  
+  # Log file location (set to null to disable file logging)
+  file: logs/packetqth.log
+  
+  # Maximum log file size in MB
+  max_size_mb: 10
+  
+  # Number of backup log files to keep
+  backup_count: 5
+  
+  # Log authentication attempts
+  log_auth_attempts: true
+
+security:
+  # Banner displayed on connection (keep short for bandwidth)
+  welcome_banner: "PacketQTH v0.1.0"
+  
+  # Disconnect message
+  disconnect_message: "73!"
+  
+  # Enable rate limiting
+  rate_limiting: true
+  
+  # Allow connections from these IPs only (empty = allow all)
+  # Use CIDR notation: 192.168.1.0/24
+  ip_whitelist: []
