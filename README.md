@@ -2,9 +2,7 @@
 
 > Control your HomeAssistant from anywhere via packet radio
 
-**PacketQTH** is a minimal, text-based interface for HomeAssistant designed for use over packet radio. Connect via telnet through your linBPQ node and control your smart home with simple commands, even at 1200 baud.
-
-The name combines "Packet" (radio) with "QTH" (ham radio Q-code for location/home) - representing remote home control via packet radio.
+**PacketQTH** is a minimal, text-based interface for HomeAssistant designed for use over packet radio. Connect via telnet through your linBPQ node and control your smart home with simple commands, at 1200, or even 300 baud.
 
 ```
 PacketQTH v0.1.0
@@ -47,15 +45,15 @@ Q         Quit
 - 🏠 **Full HA Control** - Lights, switches, sensors, blinds, and automations
 - 🐳 **Containerized** - Docker deployment with security hardening
 - 🔒 **Rate Limited** - Protection against brute force attacks
-- 📱 **Standard TOTP** - Works with Google Authenticator, Authy, etc.
+- 📱 **Standard TOTP** - Works with Google Authenticator, Password Managers, etc.
 
 ## Why PacketQTH?
 
 Packet radio provides reliable communication when internet and cellular networks fail. With PacketQTH, you can:
 
-- Control your home during emergencies or disasters
+- Meet part 97 requirements for automatic operation using relays managed by HomeAssistant without depending on the internet
 - Access home automation from remote locations without internet
-- Integrate home control with EMCOMM operations
+- Monitor your station's power usage with HomeAssistant-connected sensors over the air
 - Demonstrate practical applications of packet radio technology
 
 ## Quick Start
@@ -63,7 +61,7 @@ Packet radio provides reliable communication when internet and cellular networks
 ### Prerequisites
 
 - HomeAssistant instance with API access
-- LinBPQ packet node/BBS
+- BPQ packet node/BBS
 - Python 3.11+
 - Docker (recommended) or systemd
 
@@ -78,14 +76,6 @@ PacketQTH has minimal dependencies for fast installation:
 
 **Tools (optional):**
 - `qrcode[pil]` - QR code generation for TOTP setup
-
-```bash
-# Install core dependencies (server only)
-pip3 install -r requirements.txt
-
-# Install with tools (for TOTP setup)
-pip3 install -r requirements-tools.txt
-```
 
 ### Installation
 
