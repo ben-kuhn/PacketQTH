@@ -30,6 +30,7 @@ if ! docker image inspect packetqth-setup:latest &>/dev/null; then
 FROM python:3.11-slim
 WORKDIR /app
 COPY requirements-tools.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements-tools.txt
 COPY tools/setup_totp.py tools/
 COPY auth/ auth/
