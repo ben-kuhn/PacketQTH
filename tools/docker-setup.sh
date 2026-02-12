@@ -56,9 +56,3 @@ else
     fi
 fi
 
-echo ""
-echo "Next steps:"
-echo "1. Scan the QR code with your authenticator app"
-echo "2. Add the TOTP secret to users.yaml"
-echo "3. Run: docker-compose up -d"
-echo ""

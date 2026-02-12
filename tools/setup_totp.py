@@ -156,7 +156,9 @@ Examples:
     print("\nNext steps:")
     print("1. Scan the QR code with an authenticator app (or enter secret manually)")
     print("2. Add the configuration entry to users.yaml")
-    print("3. Test authentication with: python tools/test_totp.py")
+    print("3. Add your HomeAssistant URL to config.yaml")
+    print("4. Add your API key to .env")
+    print("5. Start the container with \"docker-compose up -d\" or ./start.sh ")
     print("\n73!")
 
 
