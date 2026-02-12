@@ -7,26 +7,36 @@
 The name combines "Packet" (radio) with "QTH" (ham radio Q-code for location/home) - representing remote home control via packet radio.
 
 ```
-Connected to PACKETQTH
-Callsign: KN4XYZ
-TOTP Code: 123456
+PacketQTH v0.1.0
+KN4XYZ
 
-Authenticated. Welcome KN4XYZ!
+Welcome KN4XYZ!
+Type H for help
 
-MAIN MENU
-[L]ist devices
-[A]utomations
-[H]elp
-[Q]uit
 > L
 
 DEVICES (pg 1/1)
-1.LT Kitchen      [ON]
-2.LT Bedroom      [OFF]
-3.SW Garage       [ON]
+1.LT Kitchen    [ON]
+2.LT Bedroom    [--]
+3.SW Garage     [ON]
+4.SN Temp       72F
+N:
 
 > OFF 1
-OK: Kitchen Light OFF
+OK: Kitchen Light turned off
+
+> H
+
+COMMANDS
+L [pg]    List devices
+S <id>    Show device
+ON <id>   Turn on
+OFF <id>  Turn off
+SET <id> <val> Set value
+A [pg]    List automations
+T <id>    Trigger automation
+H         Help (this menu)
+Q         Quit
 ```
 
 ## Features
@@ -53,47 +63,148 @@ Packet radio provides reliable communication when internet and cellular networks
 ### Prerequisites
 
 - HomeAssistant instance with API access
-- linBPQ packet node/BBS
+- LinBPQ packet node/BBS
 - Python 3.11+
 - Docker (recommended) or systemd
+
+### Dependencies
+
+PacketQTH has minimal dependencies for fast installation:
+
+**Core (required):**
+- `pyotp` - TOTP authentication
+- `PyYAML` - Configuration files
+- `aiohttp` - HomeAssistant API client
+
+**Tools (optional):**
+- `qrcode[pil]` - QR code generation for TOTP setup
+
+```bash
+# Install core dependencies (server only)
+pip3 install -r requirements.txt
+
+# Install with tools (for TOTP setup)
+pip3 install -r requirements-tools.txt
+```
 
 ### Installation
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/yourusername/packetqth.git
+git clone https://github.com/ben-kuhn/packetqth.git
 cd packetqth
 ```
 
-2. **Create user configuration:**
-```bash
-python tools/setup_totp.py KN4XYZ --qr-file qr.png
-```
-Scan the QR code with your authenticator app and add the user to `users.yaml`.
+2. **Set up users:**
 
-3. **Configure HomeAssistant connection:**
+**Option A: Docker-Only (No Host Dependencies)** ⭐ Recommended for Docker
+```bash
+# Generate TOTP using Docker (no Python packages needed on host!)
+./tools/docker-setup.sh KN4XYZ
+
+# Scan the ASCII QR code displayed in terminal with your authenticator app
+```
+
+**Option B: Simple Python (No Packages)**
+```bash
+# Generate secret using only Python stdlib
+python3 tools/generate_secret.py KN4XYZ
+
+# Manually enter the displayed secret into your authenticator app
+```
+
+**Option C: Full Setup Tool (Requires Python Packages)**
+```bash
+# Install tools dependencies on host
+pip3 install -r requirements-tools.txt
+
+# Generate with QR code
+python3 tools/setup_totp.py KN4XYZ
+```
+
+**Add User to Configuration:**
+```bash
+# Copy example users file
+cp users.yaml.example users.yaml
+
+# Add your TOTP secret to users.yaml
+nano users.yaml
+```
+
+**Note:** See [DOCKER.md](DOCKER.md) for detailed Docker setup instructions.
+
+3. **Configure the application:**
+```bash
+# Copy example config
+cp config.yaml.example config.yaml
+
+# Edit config with your settings
+nano config.yaml
+
+# Set your HomeAssistant token (recommended via environment variable)
+export HA_TOKEN=your_long_lived_access_token_here
+```
+
+Or add the token directly to config.yaml:
 ```yaml
-# config.yaml
 homeassistant:
   url: http://homeassistant.local:8123
   token: your_long_lived_access_token_here
 ```
 
-4. **Run with Docker:**
+4. **Run with Docker (recommended):**
+
+**Important:** Complete steps 2 and 3 (TOTP setup and configuration) BEFORE running Docker!
+
 ```bash
+# After setting up users and config on host
 docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
 ```
 
-Or install dependencies and run directly:
+**Docker + TOTP Setup Workflow:**
+1. Run `setup_totp.py` on your **host machine** (not in container)
+2. Scan QR code with your authenticator app
+3. Add TOTP secret to `users.yaml` on your host
+4. Create `config.yaml` on your host with HA token
+5. Run `docker-compose up -d` (mounts config files from host)
+
+**Or run directly without Docker:**
 ```bash
-pip install -r requirements.txt
-python main.py
+pip3 install -r requirements.txt
+python3 main.py
+
+# Or use the start script
+./start.sh
 ```
 
-5. **Configure linBPQ:**
-Point your linBPQ telnet gateway to `localhost:8023` (or your server IP).
+5. **Configure LinBPQ:**
 
-6. **Connect and enjoy!**
+Add an application entry to your LinBPQ `bpq32.cfg`:
+```
+APPLICATION 10,PACKETQTH,C 10 HOST localhost 8023
+```
+
+This creates a telnet application that connects to PacketQTH on localhost:8023.
+
+Users can then connect with: `C PACKETQTH` or `TELNET PACKETQTH`
+
+6. **Connect and test:**
+
+Via LinBPQ:
+```
+BPQ -> TELNET -> Connect to PacketQTH
+```
+
+Or directly via telnet for testing:
+```bash
+telnet localhost 8023
+```
 
 ## Architecture
 
@@ -293,13 +404,15 @@ Please open an issue first to discuss major changes.
 
 ## License
 
-MIT License - See LICENSE file for details
+GNU General Public License v3.0 or later - See LICENSE file for details
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
 ## Support
 
-- **Issues:** [GitHub Issues](https://github.com/yourusername/packetqth/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/yourusername/packetqth/discussions)
-- **Email:** your.callsign@example.com
+- **Issues:** [GitHub Issues](https://github.com/ben-kuhn/packetqth/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/ben-kuhn/packetqth/discussions)
+- **Email:** ku0hn@ku0hn.radio
 
 ## Acknowledgments
 

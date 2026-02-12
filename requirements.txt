@@ -1,0 +1,11 @@
+# PacketQTH Core Dependencies
+# These are required to run the server
+
+# TOTP Authentication
+pyotp>=2.9.0
+
+# Configuration
+PyYAML>=6.0
+
+# HomeAssistant API Client
+aiohttp>=3.9.0

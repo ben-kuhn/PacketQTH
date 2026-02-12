@@ -1,0 +1,14 @@
+# PacketQTH Optional Dependencies
+# Install these only if you need to run setup/development tools
+
+# Include core dependencies
+-r requirements.txt
+
+# QR Code Generation (for TOTP setup tool)
+# This pulls in Pillow (~3MB) but is only needed for initial setup
+qrcode[pil]>=7.4.0
+
+# Development/Testing Tools (optional)
+# bandit>=1.7.0        # Security scanning
+# safety>=2.0.0        # Dependency vulnerability scanning
+# pip-audit>=2.0.0     # Audit Python packages
