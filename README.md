@@ -400,23 +400,31 @@ Contributions welcome! Areas of interest:
 
 - Additional entity types (climate, media players, etc.)
 - Command macros/scripting
-- APRS integration
-- Position-aware automation
+- Status monitoring/polling for live updates
 - Performance optimizations
 - Documentation improvements
+- Testing and bug fixes
 
 Please open an issue first to discuss major changes.
 
 ## Roadmap
 
-- [ ] Complete telnet server implementation
-- [ ] Command parser and handlers
-- [ ] HomeAssistant API client
-- [ ] Entity caching layer
-- [ ] Text formatter with pagination
-- [ ] Status monitoring/polling
-- [ ] Command macros
-- [ ] APRS integration
+**Core Features (Completed):**
+- [x] Complete telnet server implementation
+- [x] Command parser and handlers
+- [x] HomeAssistant API client
+- [x] Entity caching layer
+- [x] Text formatter with pagination
+- [x] TOTP authentication with rate limiting
+- [x] LinBPQ compatibility (BPQ mode)
+- [x] Multi-platform Docker images
+- [x] Security audits and hardening
+
+**Future Enhancements:**
+- [ ] Status monitoring/polling for live state updates
+- [ ] Command macros for custom shortcuts
+- [ ] Scene and script support
+- [ ] Enhanced entity filtering
 - [ ] Multi-language support
 
 ## License

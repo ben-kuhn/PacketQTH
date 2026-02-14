@@ -662,17 +662,15 @@ Action:   Display available device IDs
 - [ ] Device filtering by room
 - [ ] Command macros (save frequently used sequences)
 - [ ] Status polling (optional background updates)
-- [ ] Scene support
+- [ ] Scene and script support
+- [ ] Historical data queries
+- [ ] Notification system
 
-### Phase 3: APRS Integration
-- [ ] Position-aware automations
-- [ ] APRS-triggered events
-- [ ] Beacon status updates
-
-### Phase 4: Multi-User
-- [ ] Concurrent user support (already architected)
+### Phase 3: Multi-User Enhancements
+- [x] Concurrent user support (already implemented)
 - [ ] Per-user device access control
-- [ ] Activity logging
+- [ ] Activity logging per user
+- [ ] User-specific command shortcuts
 
 ## Testing Strategy
 
