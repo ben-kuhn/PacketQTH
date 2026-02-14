@@ -2,9 +2,14 @@ version: '3.8'
 
 services:
   packetqth:
-    build: .
+    # Use pre-built image from GitHub Container Registry
+    image: ghcr.io/ben-kuhn/packetqth:latest
+
+    # Or build locally (uncomment to build from source)
+    # build: .
+    # image: packetqth:latest
+
     container_name: packetqth
-    image: packetqth:latest
     restart: unless-stopped
     
     ports:

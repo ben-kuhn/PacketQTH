@@ -1,0 +1,34 @@
+# PacketQTH Tools Container
+#
+# This image includes tools dependencies (qrcode[pil]) for TOTP setup
+# Use this for generating TOTP secrets with QR codes
+#
+# Usage:
+#   docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest python tools/setup_totp.py KN4XYZ
+#
+# Or with file output:
+#   docker run --rm -v $(pwd):/output ghcr.io/ben-kuhn/packetqth-tools:latest \
+#     python tools/setup_totp.py KN4XYZ --qr-file /output/qr.png
+
+FROM python:3.11-slim
+
+# Create non-root user
+RUN groupadd -r packetqth && useradd -r -g packetqth packetqth
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first for better layer caching
+COPY requirements.txt requirements-tools.txt ./
+
+# Install dependencies (includes tools)
+RUN pip install --no-cache-dir -r requirements-tools.txt
+
+# Copy application code
+COPY . .
+
+# Switch to non-root user
+USER packetqth
+
+# Default command shows available tools
+CMD ["sh", "-c", "echo 'PacketQTH Tools Container' && echo '' && echo 'Available tools:' && ls -1 tools/*.py | sed 's|tools/||' && echo '' && echo 'Usage examples:' && echo '  Generate TOTP with QR code:' && echo '    docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest python tools/setup_totp.py YOUR_CALLSIGN' && echo '' && echo '  Generate TOTP without dependencies:' && echo '    docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest python tools/generate_secret.py YOUR_CALLSIGN' && echo '' && echo '  Save QR code to file:' && echo '    docker run --rm -v $(pwd):/output ghcr.io/ben-kuhn/packetqth-tools:latest python tools/setup_totp.py YOUR_CALLSIGN --qr-file /output/qr.png'"]

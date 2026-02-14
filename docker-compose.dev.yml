@@ -1,0 +1,30 @@
+# Docker Compose for Local Development
+# Use this when you want to build from source instead of using pre-built images
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# Or create an alias in your .bashrc:
+#   alias dc-dev='docker-compose -f docker-compose.yml -f docker-compose.dev.yml'
+
+version: '3.8'
+
+services:
+  packetqth:
+    # Override to build from local source
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: packetqth:dev
+
+    # Override for development (optional)
+    # Uncomment to enable hot-reload for development
+    # volumes:
+    #   - .:/app
+    #   - ./config.yaml:/app/config.yaml:ro
+    #   - ./users.yaml:/app/users.yaml:ro
+    #   - ./logs:/app/logs
+
+    # Development environment variables
+    environment:
+      - LOG_LEVEL=DEBUG

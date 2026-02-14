@@ -2,6 +2,10 @@
 
 > Control your HomeAssistant from anywhere via packet radio
 
+[![Docker Image](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/ben-kuhn/packetqth/pkgs/container/packetqth)
+[![License](https://img.shields.io/badge/license-GPLv3+-blue.svg)](LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/ben-kuhn/packetqth)](https://github.com/ben-kuhn/packetqth/releases)
+
 **PacketQTH** is a minimal, text-based interface for HomeAssistant designed for use over packet radio. Connect via telnet through your linBPQ node and control your smart home with simple commands, at 1200, or even 300 baud.
 
 ```
@@ -87,15 +91,28 @@ cd packetqth
 
 2. **Set up users:**
 
-**Option A: Docker-Only (No Host Dependencies)** ⭐ Recommended for Docker
+**Option A: Pre-Built Tools Image** ⭐ Recommended
 ```bash
-# Generate TOTP using Docker (no Python packages needed on host!)
-./tools/docker-setup.sh KN4XYZ
+# Generate TOTP using pre-built tools image (no installation needed!)
+docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/setup_totp.py KN4XYZ
 
 # Scan the ASCII QR code displayed in terminal with your authenticator app
+
+# Or save QR code to file:
+docker run --rm -v $(pwd):/output ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/setup_totp.py KN4XYZ --qr-file /output/qr.png
 ```
 
-**Option B: Simple Python (No Packages)**
+**Option B: Build Tools Image Locally**
+```bash
+# Build and run tools image locally
+./tools/docker-setup.sh KN4XYZ
+
+# Scan the ASCII QR code displayed in terminal
+```
+
+**Option C: Simple Python (No Packages)**
 ```bash
 # Generate secret using only Python stdlib
 python3 tools/generate_secret.py KN4XYZ
@@ -103,7 +120,7 @@ python3 tools/generate_secret.py KN4XYZ
 # Manually enter the displayed secret into your authenticator app
 ```
 
-**Option C: Full Setup Tool (Requires Python Packages)**
+**Option D: Full Setup Tool (Requires Python Packages)**
 ```bash
 # Install tools dependencies on host
 pip3 install -r requirements-tools.txt
@@ -146,6 +163,16 @@ homeassistant:
 
 **Important:** Complete steps 2 and 3 (TOTP setup and configuration) BEFORE running Docker!
 
+**Pre-built images available:**
+```bash
+# Pull the latest image from GitHub Container Registry
+docker pull ghcr.io/ben-kuhn/packetqth:latest
+
+# Or use a specific version
+docker pull ghcr.io/ben-kuhn/packetqth:1.0.0
+```
+
+**Run with docker-compose:**
 ```bash
 # After setting up users and config on host
 docker-compose up -d

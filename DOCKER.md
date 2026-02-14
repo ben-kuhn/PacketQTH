@@ -12,14 +12,73 @@ PacketQTH can be deployed using Docker for:
 
 **Important:** TOTP setup must be done on the host machine BEFORE running the container.
 
+## Pre-Built Images
+
+Official images are automatically built and published to GitHub Container Registry.
+
+### Runtime Image
+
+**Image:** `ghcr.io/ben-kuhn/packetqth`
+
+Minimal image for running the PacketQTH server (~200KB dependencies).
+
+**Available tags:**
+- `latest` - Latest stable build from main branch
+- `1.0.0` - Specific version (replace with actual version)
+- `1.0` - Major.minor version
+- `1` - Major version
+- `main` - Latest build from main branch
+
+**Pull the image:**
+```bash
+docker pull ghcr.io/ben-kuhn/packetqth:latest
+```
+
+### Tools Image
+
+**Image:** `ghcr.io/ben-kuhn/packetqth-tools`
+
+Includes tools dependencies (qrcode, Pillow) for TOTP setup with QR codes (~3MB extra).
+
+**Available tags:** Same as runtime image with `-tools` suffix
+
+**Use for TOTP setup:**
+```bash
+# Generate TOTP with terminal QR code
+docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/setup_totp.py YOUR_CALLSIGN
+
+# Generate TOTP and save QR as PNG
+docker run --rm -v $(pwd):/output \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/setup_totp.py YOUR_CALLSIGN --qr-file /output/qr.png
+```
+
+### Multi-Platform Support
+
+Both images support:
+- `linux/amd64` - Standard x86_64 servers
+- `linux/arm64` - ARM64 (Raspberry Pi 4, Apple Silicon)
+- `linux/arm/v7` - ARM v7 (Raspberry Pi 3)
+
+Images are automatically built on:
+- Every push to main branch
+- Every version tag (e.g., `v1.0.0`)
+
+See [.github/workflows/README.md](.github/workflows/README.md) for details.
+
 ## Quick Start
 
-**Docker-Only (No Host Dependencies):**
+**Using Pre-Built Tools Image (Recommended):**
 ```bash
-# 1. Setup TOTP using Docker
-./tools/docker-setup.sh YOUR_CALLSIGN
+# 1. Setup TOTP using pre-built tools image
+docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/setup_totp.py YOUR_CALLSIGN
 
 # Scan QR code displayed in terminal with your phone
+# Or save to file:
+# docker run --rm -v $(pwd):/output ghcr.io/ben-kuhn/packetqth-tools:latest \
+#   python tools/setup_totp.py YOUR_CALLSIGN --qr-file /output/qr.png
 
 # 2. Configure
 cp config.yaml.example config.yaml
@@ -27,18 +86,25 @@ cp users.yaml.example users.yaml
 nano users.yaml  # Add TOTP secret from step 1
 nano config.yaml # Set HomeAssistant URL
 
-# 3. Run container
+# 3. Run container (uses runtime image)
 docker-compose up -d
 ```
 
-**Alternative (Python Only, No Packages):**
+**Alternative Methods:**
+
+**A) Using Local Docker Build:**
 ```bash
-# 1. Generate TOTP secret (no dependencies!)
+# Build and run tools image locally
+./tools/docker-setup.sh YOUR_CALLSIGN
+# (Rest same as above)
+```
+
+**B) No Docker (Python Only):**
+```bash
+# Generate TOTP secret (no dependencies!)
 python3 tools/generate_secret.py YOUR_CALLSIGN
-
 # Manually enter secret in authenticator app
-
-# 2-3. Same as above
+# (Rest same as above)
 ```
 
 ## TOTP Setup for Docker
