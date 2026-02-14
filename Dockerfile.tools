@@ -12,6 +12,16 @@
 
 FROM python:3.11-slim
 
+# Install system dependencies for Pillow (image library)
+# Required for building wheels on ARM platforms
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libc-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    libpng-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create non-root user
 RUN groupadd -r packetqth && useradd -r -g packetqth packetqth
 
@@ -21,8 +31,9 @@ WORKDIR /app
 # Copy requirements first for better layer caching
 COPY requirements.txt requirements-tools.txt ./
 
-# Install dependencies (includes tools)
-RUN pip install --no-cache-dir -r requirements-tools.txt
+# Upgrade pip and install dependencies (includes tools)
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements-tools.txt
 
 # Copy application code
 COPY . .
