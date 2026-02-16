@@ -304,6 +304,37 @@ class TelnetSession:
                 await self.send("73!")
                 break
 
+            # Check if this is a write operation requiring TOTP
+            if command.is_write_operation():
+                # Prompt for fresh TOTP code
+                await self.send("")
+                totp_code = await self.read_line("TOTP Code: ", timeout=60)
+
+                if totp_code is None:
+                    logger.info(f"Write operation aborted (timeout) for {self.callsign}")
+                    await self.send("Operation cancelled.")
+                    continue
+
+                totp_code = totp_code.strip()
+
+                # Validate TOTP format
+                if not totp_code or len(totp_code) != 6 or not totp_code.isdigit():
+                    await self.send("Invalid code format (must be 6 digits).")
+                    await self.send("")
+                    continue
+
+                # Verify TOTP
+                success, message = self.authenticator.verify_totp(self.callsign, totp_code)
+
+                if not success:
+                    logger.warning(f"Failed TOTP verification for write operation by {self.callsign}")
+                    await self.send(message)
+                    await self.send("")
+                    continue
+
+                # TOTP verified - proceed with write operation
+                logger.info(f"TOTP verified for write operation by {self.callsign}")
+
             # Validate and execute command
             try:
                 if self.command_handler:

@@ -65,6 +65,22 @@ class Command:
         """Check if command supports pagination."""
         return self.type in (CommandType.LIST, CommandType.AUTOMATIONS)
 
+    def is_write_operation(self) -> bool:
+        """
+        Check if command is a write operation that modifies state.
+
+        Write operations require fresh TOTP verification for security.
+
+        Returns:
+            True if command modifies HomeAssistant state, False otherwise
+        """
+        return self.type in (
+            CommandType.ON,
+            CommandType.OFF,
+            CommandType.SET,
+            CommandType.TRIGGER
+        )
+
     def __str__(self) -> str:
         """String representation of command."""
         parts = [f"Command({self.type.value}"]

@@ -75,9 +75,10 @@ Operating over cleartext radio requires:
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                  AUTHENTICATION LAYER                        │
-│  • TOTP verification                                         │
+│  • TOTP verification (login + per-write operation)          │
 │  • Session management                                        │
 │  • Rate limiting                                             │
+│  • Write operation protection                                │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
@@ -151,7 +152,7 @@ async def handle_connection(reader, writer):
 
 ### 2. Authentication Layer
 
-**Purpose:** Verify user identity without sending passwords
+**Purpose:** Verify user identity without sending passwords, and protect write operations
 
 **Components:**
 - `TOTPAuthenticator` - TOTP verification with rate limiting
@@ -167,11 +168,23 @@ async def handle_connection(reader, writer):
 6. System verifies code
    ✓ Success → Create session, enter command loop
    ✗ Failure → Show error, retry (max 5 attempts)
+
+7. User enters command
+   • Read operation (L/S/A/H/R) → Execute immediately
+   • Write operation (ON/OFF/SET/T) → Prompt for fresh TOTP
+8. For write operations:
+   System prompts: "TOTP Code: "
+   User enters: 789012 (fresh code from app)
+   System verifies code
+   ✓ Success → Execute write operation
+   ✗ Failure → Deny operation, stay in session
 ```
 
 **Security Features:**
-- Rate limiting: 5 attempts per 5 minutes
-- Session timeout: 30 minutes inactivity
+- **TOTP-per-write**: Fresh code required for every state change
+- **Natural rate limiting**: Write operations limited to 30-second intervals
+- **Authentication rate limiting**: 5 failed login attempts per 5 minutes trigger lockout
+- Session timeout: 5 minutes inactivity (configurable)
 - ±90 second time window (clock drift tolerance)
 - Secure session IDs (32 hex chars)
 
@@ -565,8 +578,12 @@ python main.py
 
 ### 1. Authentication
 
-✅ **TOTP Codes**
-- Single-use, time-limited
+✅ **TOTP-per-Write Protection**
+- Fresh TOTP code required for every write operation (ON/OFF/SET/TRIGGER)
+- Read operations (L/S/A/H/R) execute without additional auth
+- Naturally rate-limits write operations to 30-second intervals
+- Prevents replay attacks even if TOTP code is intercepted
+- Single-use, time-limited codes
 - Safe for cleartext transmission
 - Standard authenticator app support
 
@@ -574,12 +591,19 @@ python main.py
 - Passwords (would be exposed)
 - API keys (would be exposed)
 - Encryption (illegal on amateur radio)
+- Session-only auth (too risky for write operations)
 
 ### 2. Rate Limiting
 
-- 5 failed attempts → 5 minute lockout
+**Authentication Rate Limiting:**
+- 5 failed login attempts → 5 minute lockout
 - Prevents brute force attacks
 - Per-callsign tracking
+
+**Write Operation Rate Limiting:**
+- TOTP window naturally limits writes to 30-second intervals
+- Fresh code required per operation
+- Cannot be bypassed or batched
 
 ### 3. Container Isolation
 
@@ -596,9 +620,11 @@ python main.py
 
 ### 5. Session Management
 
-- 30 minute timeout
-- Secure random session IDs
-- Automatic cleanup
+- 5 minute inactivity timeout (configurable)
+- Secure random session IDs (32 hex chars)
+- Automatic cleanup of expired sessions
+- Session only grants read access
+- Write operations require fresh TOTP regardless of session
 
 ## Performance Considerations
 
@@ -608,12 +634,16 @@ At 1200 baud (120 bytes/second):
 
 | Operation | Bytes | Time |
 |-----------|-------|------|
-| Auth prompt | ~50 | 0.4s |
+| Auth prompt (login) | ~50 | 0.4s |
 | List 10 devices | ~300 | 2.5s |
-| Control device | ~15 | 0.1s |
+| Control device (read) | ~15 | 0.1s |
+| Control device (write) | ~30 | 0.3s (includes TOTP prompt) |
+| TOTP prompt | ~15 | 0.1s |
 | Response | ~20 | 0.2s |
 
-**Target:** < 3 seconds for common operations
+**Target:** < 3 seconds for read operations, < 1 second for write prompts
+
+**Note:** Write operations require fresh TOTP code, adding ~0.3s overhead
 
 ### API Call Optimization
 

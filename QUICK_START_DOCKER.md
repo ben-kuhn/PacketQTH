@@ -149,14 +149,16 @@ Once connected:
 ```
 L              List devices
 S <id>         Show device details
-ON <id>        Turn on
-OFF <id>       Turn off
-SET <id> <val> Set value
+ON <id>        Turn on (requires fresh TOTP)
+OFF <id>       Turn off (requires fresh TOTP)
+SET <id> <val> Set value (requires fresh TOTP)
 A              List automations
-T <id>         Trigger automation
+T <id>         Trigger automation (requires fresh TOTP)
 H              Help
 Q              Quit
 ```
+
+**Security Note:** Write operations (ON/OFF/SET/T) require a fresh TOTP code for each action. Read operations (L/S/A/H) execute immediately. This provides enhanced security over cleartext radio and naturally rate-limits changes to 30-second intervals.
 
 ## Updating
 

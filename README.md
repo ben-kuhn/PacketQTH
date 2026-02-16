@@ -25,6 +25,8 @@ DEVICES (pg 1/1)
 N:
 
 > OFF 1
+
+TOTP Code: 123456
 OK: Kitchen Light turned off
 
 > H
@@ -39,16 +41,19 @@ A [pg]    List automations
 T <id>    Trigger automation
 H         Help (this menu)
 Q         Quit
+
+* Write operations (ON/OFF/SET/T) require fresh TOTP code
 ```
 
 ## Features
 
-- 🔐 **Secure Authentication** - TOTP-based auth safe for cleartext radio (no passwords transmitted)
+- 🔐 **Enhanced Security** - TOTP code required for every write operation (not just login)
+- 🛡️ **Natural Rate Limiting** - Write operations limited to 30-second intervals by TOTP window
 - 📡 **Ultra Low Bandwidth** - Optimized for 1200 baud packet radio connections
 - ⚡ **Simple Commands** - Single-letter shortcuts for fast operation
 - 🏠 **Full HA Control** - Lights, switches, sensors, blinds, and automations
 - 🐳 **Containerized** - Docker deployment with security hardening
-- 🔒 **Rate Limited** - Protection against brute force attacks
+- 🔒 **Brute Force Protection** - 5 attempts trigger 5-minute lockout
 - 📱 **Standard TOTP** - Works with Google Authenticator, Password Managers, etc.
 
 ## Why PacketQTH?
@@ -254,11 +259,13 @@ See [ARCHITECTURE.md](ha_packet_architecture.md) for detailed design documentati
 PacketQTH is designed for security over cleartext radio:
 
 - ✅ **No password transmission** - Uses TOTP one-time codes
-- ✅ **Rate limiting** - 5 attempts, 5-minute lockout
+- ✅ **TOTP-per-write** - Fresh code required for every state change (ON/OFF/SET/TRIGGER)
+- ✅ **Natural rate limiting** - Write operations limited to 30-second intervals (TOTP window)
+- ✅ **Authentication rate limiting** - 5 failed attempts trigger 5-minute lockout
 - ✅ **Session timeout** - 5-minute inactivity timeout
 - ✅ **Container isolation** - Run in Docker with dropped privileges
 - ✅ **Read-only filesystem** - Limits attack surface
-- ✅ **Audit logging** - Track authentication attempts
+- ✅ **Audit logging** - Track authentication and write attempts
 
 ### Legal Note
 
@@ -301,6 +308,8 @@ DEVICES (pg 1/1)
 2.SW Garage       [OFF]
 
 > ON 2
+
+TOTP Code: 123456
 OK: Garage Switch ON
 
 > A
@@ -309,11 +318,15 @@ AUTOMATIONS (pg 1/1)
 2. Morning Routine
 
 > T 1
+
+TOTP Code: 789012
 OK: Good Night triggered
 
 > Q
 73!
 ```
+
+**Note:** Write operations (ON, OFF, SET, TRIGGER) require a fresh TOTP code for security. Read operations (L, S, A, H) execute immediately without additional authentication.
 
 ## Configuration
 
