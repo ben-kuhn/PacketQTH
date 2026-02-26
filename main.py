@@ -224,7 +224,7 @@ class PacketQTH:
         logger.info(f"BPQ Mode: {telnet_config.get('bpq_mode', True)}")
         logger.info(f"Max Connections: {telnet_config.get('max_connections', 10)}")
         logger.info(f"Timeout: {telnet_config.get('timeout_seconds', 300)}s")
-        logger.info(f"Entities: {len(self.entity_mapper.get_all_entities())}")
+        logger.info(f"Entities: {len(self.entity_mapper.get_all())}")
         logger.info("=" * 60)
 
     async def stop(self):
@@ -248,7 +248,7 @@ class PacketQTH:
         await self.start()
 
         # Wait for server to finish
-        await self.server.wait_closed()
+        await self.server.serve_forever()
 
         await self.stop()
 
