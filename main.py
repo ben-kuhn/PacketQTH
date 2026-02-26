@@ -144,7 +144,7 @@ class PacketQTH:
             sys.exit(1)
 
         self.ha_client = HomeAssistantClient(
-            base_url=ha_url,
+            url=ha_url,
             token=ha_token,
             cache_ttl=ha_config.get('cache_ttl', 60)
         )
