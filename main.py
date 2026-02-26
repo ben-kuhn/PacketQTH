@@ -128,11 +128,9 @@ class PacketQTH:
         # Load configuration
         self.config = self.load_config()
 
-        # Load users
-        users = self.load_users(self.config.get('auth', {}).get('users_file', 'users.yaml'))
-
         # Initialize authenticator
-        authenticator = TOTPAuthenticator(users)
+        users_file = self.config.get('auth', {}).get('users_file', 'users.yaml')
+        authenticator = TOTPAuthenticator(users_file)
         session_manager = SessionManager()
         logger.info("Authentication components initialized")
 
