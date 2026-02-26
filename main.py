@@ -238,10 +238,8 @@ async def main():
         if app.server:
             app.server.shutdown()  # sets shutdown_event, unblocks serve_forever()
 
-    # Only SIGTERM triggers shutdown — the server runs as a service.
-    # SIGINT (Ctrl+C) is intentionally not handled here; client-side
-    # Ctrl+C is handled in-session as a disconnect, not a server stop.
-    loop.add_signal_handler(signal.SIGTERM, signal_handler)
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(sig, signal_handler)
 
     try:
         await app.run()
