@@ -35,7 +35,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('packetqth.log')
+        logging.FileHandler('/app/logs/packetqth.log')
     ]
 )
 
