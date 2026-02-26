@@ -197,7 +197,7 @@ class PacketQTH:
             max_connections=telnet_config.get('max_connections', 10),
             timeout_seconds=telnet_config.get('timeout_seconds', 300),
             max_auth_attempts=security_config.get('max_auth_attempts', 3),
-            welcome_banner=security_config.get('welcome_banner', 'PacketQTH'),
+            banner=security_config.get('welcome_banner', 'PacketQTH'),
             bpq_mode=telnet_config.get('bpq_mode', True),
             ip_safelist=security_config.get('ip_safelist', [])
         )
