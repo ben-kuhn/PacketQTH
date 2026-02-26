@@ -174,7 +174,7 @@ async def test_entity_mapper():
         failed += 1
 
     # Test all entities
-    all_entities = mapper.get_all_entities()
+    all_entities = mapper.get_all()
     if len(all_entities) == len(MOCK_ENTITIES):
         print(f"✓ Get all: {len(all_entities)} entities")
         passed += 1

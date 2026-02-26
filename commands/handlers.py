@@ -95,7 +95,7 @@ class CommandHandler:
         page_num = command.page or 1
 
         # Get all entities from mapper
-        entities = self.mapper.get_all_entities()
+        entities = self.mapper.get_all()
 
         if not entities:
             return format_error_message("No devices found", "Check HA connection")
@@ -235,7 +235,7 @@ class CommandHandler:
         page_num = command.page or 1
 
         # Get all entities from mapper
-        entities = self.mapper.get_all_entities()
+        entities = self.mapper.get_all()
 
         # Filter for automations only
         automations = [e for e in entities if e['entity_id'].startswith('automation.')]
