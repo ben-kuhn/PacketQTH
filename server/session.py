@@ -288,6 +288,12 @@ class TelnetSession:
                 # Empty line, continue
                 continue
 
+            # Ctrl+C (ETX \x03) or Ctrl+D (EOT \x04) from telnet client → end session
+            if any(c in user_input for c in ('\x03', '\x04')):
+                logger.info(f"Session terminated by {self.callsign} (interrupt character)")
+                await self.send("73!")
+                break
+
             # Update session activity
             if self.session:
                 self.session.update_activity()
