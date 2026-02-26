@@ -192,7 +192,7 @@ def paginate_and_format(
 
 
 def format_page_with_entities(
-    entities: List[Dict[str, Any]],
+    items: List[Tuple[int, Dict[str, Any]]],
     entity_formatter_func,
     page_num: int = 1,
     page_size: int = 10,
@@ -202,8 +202,9 @@ def format_page_with_entities(
     Format a page of entities with header and navigation.
 
     Args:
-        entities: List of entity dictionaries
-        entity_formatter_func: Function to format each entity
+        items: List of (numeric_id, entity) tuples — numeric_id is the
+               mapper-assigned ID that the user types in commands
+        entity_formatter_func: Function to format each entity: (id, entity) -> str
         page_num: Page number to display
         page_size: Entities per page
         title: Title for the page
@@ -211,8 +212,8 @@ def format_page_with_entities(
     Returns:
         Tuple of (formatted_lines, page_info)
     """
-    paginator = Paginator(entities, page_size)
-    page_entities = paginator.get_page(page_num)
+    paginator = Paginator(items, page_size)
+    page_items = paginator.get_page(page_num)
     page_info = paginator.get_page_info(page_num)
 
     lines = []
@@ -221,10 +222,9 @@ def format_page_with_entities(
     header = paginator.format_page_indicator(page_num, prefix=title)
     lines.append(header)
 
-    # Format entities
-    start_id = page_info['start_index'] + 1  # 1-indexed for display
-    for i, entity in enumerate(page_entities, start=start_id):
-        formatted = entity_formatter_func(i, entity)
+    # Format entities using the actual mapper IDs, not sequential positions
+    for numeric_id, entity in page_items:
+        formatted = entity_formatter_func(numeric_id, entity)
         lines.append(formatted)
 
     # Navigation

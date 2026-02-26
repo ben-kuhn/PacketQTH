@@ -100,12 +100,16 @@ class CommandHandler:
         if not entities:
             return format_error_message("No devices found", "Check HA connection")
 
-        # Filter out automations
-        devices = [e for e in entities if not e['entity_id'].startswith('automation.')]
+        # Filter out automations and pair each device with its mapper ID
+        devices = [
+            (self.mapper.get_id(e['entity_id']), e)
+            for e in entities
+            if not e['entity_id'].startswith('automation.')
+        ]
 
         # Format page
         lines, page_info = format_page_with_entities(
-            entities=devices,
+            items=devices,
             entity_formatter_func=format_entity_line,
             page_num=page_num,
             page_size=self.page_size,
@@ -237,15 +241,19 @@ class CommandHandler:
         # Get all entities from mapper
         entities = self.mapper.get_all()
 
-        # Filter for automations only
-        automations = [e for e in entities if e['entity_id'].startswith('automation.')]
+        # Filter for automations only and pair each with its mapper ID
+        automations = [
+            (self.mapper.get_id(e['entity_id']), e)
+            for e in entities
+            if e['entity_id'].startswith('automation.')
+        ]
 
         if not automations:
             return format_error_message("No automations found")
 
         # Format page
         lines, page_info = format_page_with_entities(
-            entities=automations,
+            items=automations,
             entity_formatter_func=format_entity_line,
             page_num=page_num,
             page_size=self.page_size,

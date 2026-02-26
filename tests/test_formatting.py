@@ -442,33 +442,40 @@ class TestPaginateAndFormat:
 # ---------------------------------------------------------------------------
 
 class TestFormatPageWithEntities:
-    def _make_entities(self, count):
+    def _make_items(self, count, id_offset=1):
+        """Return (mapper_id, entity) tuples as the handler now passes."""
         return [
-            {'entity_id': f'light.light_{i}', 'state': 'on', 'attributes': {'friendly_name': f'Light {i}'}}
-            for i in range(1, count + 1)
+            (
+                id_offset + i,
+                {'entity_id': f'light.light_{i}', 'state': 'on', 'attributes': {'friendly_name': f'Light {i}'}}
+            )
+            for i in range(count)
         ]
 
     def test_returns_tuple(self):
-        result = format_page_with_entities(self._make_entities(3), lambda i, e: f"{i}. {e['entity_id']}")
+        result = format_page_with_entities(self._make_items(3), lambda i, e: f"{i}. {e['entity_id']}")
         assert isinstance(result, tuple)
         assert len(result) == 2
 
     def test_lines_and_page_info(self):
-        entities = self._make_entities(5)
-        lines, info = format_page_with_entities(entities, lambda i, e: str(i))
+        items = self._make_items(5)
+        lines, info = format_page_with_entities(items, lambda i, e: str(i))
         assert isinstance(lines, list)
         assert isinstance(info, dict)
         assert 'total_pages' in info
 
-    def test_entity_ids_are_1_indexed(self):
-        entities = self._make_entities(3)
-        lines, _ = format_page_with_entities(entities, lambda i, e: str(i))
-        # First line is header, entities start at line[1]
-        assert '1' in lines[1]
+    def test_display_uses_mapper_id_not_position(self):
+        # Items with mapper IDs starting at 50 (simulating automations occupying 1-49)
+        items = self._make_items(3, id_offset=50)
+        lines, _ = format_page_with_entities(items, lambda i, e: str(i))
+        # First line is header; entity lines should show IDs 50, 51, 52
+        assert '50' in lines[1]
+        assert '51' in lines[2]
+        assert '52' in lines[3]
 
     def test_pagination_correct_page(self):
-        entities = self._make_entities(15)
-        lines, info = format_page_with_entities(entities, lambda i, e: str(i), page_num=2, page_size=10)
+        items = self._make_items(15)
+        lines, info = format_page_with_entities(items, lambda i, e: str(i), page_num=2, page_size=10)
         assert info['page_num'] == 2
         # Navigation: has_prev
         assert info['has_prev'] is True
