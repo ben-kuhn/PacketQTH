@@ -218,7 +218,7 @@ class TestFormatMainMenu:
 
     def test_contains_key_commands(self):
         menu_text = '\n'.join(format_main_menu())
-        for cmd in ['L', 'S', 'ON', 'OFF', 'SET', 'A', 'T', 'H', 'Q']:
+        for cmd in ['L', 'S', 'ON', 'OFF', 'SET', 'A', 'T', 'N', 'P', 'H', 'Q']:
             assert cmd in menu_text
 
 
@@ -433,8 +433,8 @@ class TestPaginateAndFormat:
         # No navigation line at end when single page
         # Navigation only shown when multiple pages
         assert len(lines) == 6  # 1 header + 5 items; no nav
-        # Verify the last line is an item, not a navigation prompt
-        assert ':' not in lines[-1]  # nav prompts end with ':'
+        # Verify the last line is an item, not a navigation hint
+        assert 'next' not in lines[-1].lower()
 
 
 # ---------------------------------------------------------------------------

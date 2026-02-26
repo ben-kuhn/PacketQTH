@@ -132,16 +132,16 @@ class Paginator:
         nav_options = []
 
         if info['has_next']:
-            nav_options.append('[N]ext' if not compact else 'N')
+            nav_options.append('[N]ext' if not compact else 'N=next')
 
         if info['has_prev']:
-            nav_options.append('[P]rev' if not compact else 'P')
+            nav_options.append('[P]rev' if not compact else 'P=prev')
 
         if not nav_options:
             return None
 
         if compact:
-            return ' '.join(nav_options) + ':'
+            return ' '.join(nav_options)
         else:
             return ' | '.join(nav_options)
 

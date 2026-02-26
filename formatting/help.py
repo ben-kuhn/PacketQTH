@@ -23,6 +23,7 @@ def format_main_menu() -> List[str]:
         "SET <id> <val> Set value",
         "A [pg]    List automations",
         "T <id>    Trigger automation",
+        "N / P     Next/prev page",
         "H         Help (this menu)",
         "Q         Quit"
     ]

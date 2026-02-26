@@ -66,6 +66,10 @@ class TelnetSession:
         self.session: Optional[Session] = None
         self.last_activity = datetime.now()
 
+        # Pagination state for N/P navigation
+        self._last_list_cmd: str = ""  # 'L' or 'A'
+        self._last_page: int = 1
+
         # Connection info
         peername = writer.get_extra_info('peername')
         self.remote_addr = f"{peername[0]}:{peername[1]}" if peername else "unknown"
@@ -288,6 +292,23 @@ class TelnetSession:
             if self.session:
                 self.session.update_activity()
 
+            # Translate N/P pagination shortcuts into explicit list commands
+            upper_input = user_input.upper()
+            if upper_input in ('N', 'NEXT'):
+                if not self._last_list_cmd:
+                    error_lines = format_error_message("No list active", "Use L or A first")
+                    for line in error_lines:
+                        await self.send(line)
+                    continue
+                user_input = f"{self._last_list_cmd} {self._last_page + 1}"
+            elif upper_input in ('P', 'PREV', 'PREVIOUS'):
+                if not self._last_list_cmd:
+                    error_lines = format_error_message("No list active", "Use L or A first")
+                    for line in error_lines:
+                        await self.send(line)
+                    continue
+                user_input = f"{self._last_list_cmd} {max(1, self._last_page - 1)}"
+
             # Parse command
             command = parse_command(user_input)
 
@@ -349,6 +370,14 @@ class TelnetSession:
                     if response_lines:
                         for line in response_lines:
                             await self.send(line)
+
+                    # Track pagination state so N/P can navigate
+                    if command.type == CommandType.LIST:
+                        self._last_list_cmd = 'L'
+                        self._last_page = command.page or 1
+                    elif command.type == CommandType.AUTOMATIONS:
+                        self._last_list_cmd = 'A'
+                        self._last_page = command.page or 1
                 else:
                     # No command handler - show error
                     await self.send("ERR: Command handler not initialized")
