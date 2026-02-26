@@ -163,14 +163,12 @@ class PacketQTH:
         filter_config = ha_config.get('entity_filter', {})
 
         entity_filter = EntityFilter(
-            include_domains=filter_config.get('include_domains'),
-            exclude_domains=filter_config.get('exclude_domains'),
-            include_entities=filter_config.get('include_entities'),
-            exclude_entities=filter_config.get('exclude_entities')
+            included_domains=filter_config.get('include_domains'),
+            excluded_entities=filter_config.get('exclude_entities'),
         )
 
         # Filter entities
-        filtered_entities = entity_filter.filter(entities)
+        filtered_entities = entity_filter.filter_entities(entities)
         logger.info(f"Filtered to {len(filtered_entities)} entities")
 
         # Create entity mapper
