@@ -93,34 +93,6 @@ class PacketQTH:
             logger.error(f"Error loading configuration: {e}")
             sys.exit(1)
 
-    def load_users(self, users_path: str = 'users.yaml') -> Dict[str, str]:
-        """
-        Load user TOTP secrets from YAML file.
-
-        Args:
-            users_path: Path to users file
-
-        Returns:
-            Dictionary of {callsign: totp_secret}
-        """
-        logger.info(f"Loading users from {users_path}")
-
-        if not Path(users_path).exists():
-            logger.error(f"Users file not found: {users_path}")
-            sys.exit(1)
-
-        try:
-            with open(users_path, 'r') as f:
-                data = yaml.safe_load(f)
-
-            users = data.get('users', {})
-            logger.info(f"Loaded {len(users)} users")
-            return users
-
-        except Exception as e:
-            logger.error(f"Error loading users: {e}")
-            sys.exit(1)
-
     async def initialize(self):
         """Initialize all components."""
         logger.info("Initializing PacketQTH")
