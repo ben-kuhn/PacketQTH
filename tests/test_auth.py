@@ -188,6 +188,50 @@ class TestTOTPAuthenticator:
         auth.reload_users()
         assert 'W1NEW' in auth.users
 
+    def test_token_reuse_rejected(self, users_yaml):
+        """Same token must be rejected on second use (replay attack prevention)."""
+        path, secret = users_yaml
+        auth = TOTPAuthenticator(path)
+        token = pyotp.TOTP(secret).now()
+
+        success1, _ = auth.verify_totp('KN4XYZ', token)
+        assert success1
+
+        success2, msg2 = auth.verify_totp('KN4XYZ', token)
+        assert not success2
+        assert 'already used' in msg2.lower()
+
+    def test_token_reuse_is_per_callsign(self, tmp_path):
+        """A used token for one callsign does not affect another callsign's token."""
+        import yaml
+        secret1 = pyotp.random_base32()
+        secret2 = pyotp.random_base32()
+        path = str(tmp_path / 'users.yaml')
+        with open(path, 'w') as f:
+            yaml.dump({'users': {'KN4XYZ': secret1, 'W1ABC': secret2}}, f)
+
+        auth = TOTPAuthenticator(path)
+        token1 = pyotp.TOTP(secret1).now()
+        token2 = pyotp.TOTP(secret2).now()
+
+        auth.verify_totp('KN4XYZ', token1)
+
+        # W1ABC's token (even if numerically identical) should not be blocked
+        success, _ = auth.verify_totp('W1ABC', token2)
+        assert success
+
+    def test_expired_used_tokens_not_blocking(self, users_yaml):
+        """After the validity window expires, a new valid code is accepted normally."""
+        path, secret = users_yaml
+        auth = TOTPAuthenticator(path)
+
+        # Simulate a previously-used token that has now expired
+        auth.used_tokens['KN4XYZ'] = {'999999': time.time() - 1}
+
+        token = pyotp.TOTP(secret).now()
+        success, _ = auth.verify_totp('KN4XYZ', token)
+        assert success
+
 
 # ---------------------------------------------------------------------------
 # SessionManager tests

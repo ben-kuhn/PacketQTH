@@ -29,6 +29,7 @@ def make_auth(secret=None, callsign='KN4XYZ'):
     auth.users_file = 'dummy.yaml'
     auth.users = {callsign: secret}
     auth.failed_attempts = {}
+    auth.used_tokens = {}
     return auth, secret
 
 

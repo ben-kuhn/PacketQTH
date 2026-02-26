@@ -235,7 +235,8 @@ async def main():
 
     def signal_handler():
         logger.info("Received shutdown signal")
-        asyncio.create_task(app.stop())
+        if app.server:
+            app.server.shutdown()  # sets shutdown_event, unblocks serve_forever()
 
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, signal_handler)

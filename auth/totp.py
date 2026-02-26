@@ -52,6 +52,7 @@ class TOTPAuthenticator:
         self.users_file = users_file
         self.users: Dict[str, str] = {}
         self.failed_attempts: Dict[str, list] = {}
+        self.used_tokens: Dict[str, Dict[str, float]] = {}  # callsign -> {token -> expiry_time}
         self.load_users()
 
     def load_users(self):
@@ -129,6 +130,14 @@ class TOTPAuthenticator:
             self.record_failed_attempt(callsign)
             return False, "Invalid callsign or token."
 
+        # Replay attack prevention: reject tokens already used within their validity window
+        now = time.time()
+        callsign_used = self.used_tokens.get(callsign, {})
+        # Purge expired entries while we're here
+        callsign_used = {t: exp for t, exp in callsign_used.items() if exp > now}
+        if token in callsign_used:
+            return False, "Code already used. Wait for next code."
+
         # Get user's TOTP secret
         secret = self.users[callsign]
         totp = pyotp.TOTP(secret)
@@ -136,6 +145,9 @@ class TOTPAuthenticator:
         # Verify token with ±90 second window (3 intervals @ 30 sec each)
         # This tolerates clock drift between client and server
         if totp.verify(token, valid_window=3):
+            # Record token as consumed for the full validity window (3 * 30s)
+            callsign_used[token] = now + 90
+            self.used_tokens[callsign] = callsign_used
             self.clear_failed_attempts(callsign)
             return True, "Authentication successful."
         else:
