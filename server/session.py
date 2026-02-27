@@ -114,30 +114,55 @@ class TelnetSession:
             timeout: Read timeout in seconds (uses session timeout if None)
 
         Returns:
-            Input line (stripped) or None on timeout/disconnect
+            Input line (stripped), '\x03'/'\x04' on interrupt, or None on timeout/disconnect
         """
         if prompt:
             await self.send(prompt, newline=False)
 
         timeout_val = timeout or self.timeout_seconds
+        buf = bytearray()
 
         try:
-            # Read with timeout
-            line_bytes = await asyncio.wait_for(
-                self.reader.readline(),
-                timeout=timeout_val
-            )
+            while True:
+                b_bytes = await asyncio.wait_for(
+                    self.reader.read(1),
+                    timeout=timeout_val
+                )
 
-            if not line_bytes:
-                # Connection closed
-                logger.info(f"Connection closed by {self.remote_addr}")
-                return None
+                if not b_bytes:
+                    logger.info(f"Connection closed by {self.remote_addr}")
+                    return None
 
-            # Decode and strip
-            line = line_bytes.decode('utf-8', errors='replace').strip()
+                b = b_bytes[0]
+
+                # Telnet IAC (0xFF) - handle control sequences
+                if b == 0xFF:
+                    cmd = await asyncio.wait_for(self.reader.read(1), timeout=5)
+                    if not cmd:
+                        return None
+                    if cmd[0] == 0xF4:  # IP - Interrupt Process
+                        return '\x03'
+                    # WILL/WONT/DO/DONT - consume the option byte
+                    if cmd[0] in (0xFB, 0xFC, 0xFD, 0xFE):
+                        await asyncio.wait_for(self.reader.read(1), timeout=5)
+                    continue
+
+                # Ctrl+C (ETX) or Ctrl+D (EOT) - return immediately without newline
+                if b in (0x03, 0x04):
+                    return chr(b)
+
+                # LF - end of line
+                if b == 0x0A:
+                    break
+
+                # CR - skip (telnet sends CRLF)
+                if b == 0x0D:
+                    continue
+
+                buf.append(b)
 
             self.last_activity = datetime.now()
-            return line
+            return buf.decode('utf-8', errors='replace').strip()
 
         except asyncio.TimeoutError:
             logger.info(f"Timeout waiting for input from {self.remote_addr}")
@@ -169,7 +194,7 @@ class TelnetSession:
                 # Standard mode: prompt for callsign
                 callsign = await self.read_line("Callsign: ", timeout=60)
 
-            if callsign is None:
+            if callsign is None or any(c in callsign for c in ('\x03', '\x04')):
                 logger.info(f"Authentication aborted (no callsign) from {self.remote_addr}")
                 return False
 
@@ -198,7 +223,7 @@ class TelnetSession:
             # Get TOTP code
             totp_code = await self.read_line("TOTP Code: ", timeout=60)
 
-            if totp_code is None:
+            if totp_code is None or any(c in totp_code for c in ('\x03', '\x04')):
                 logger.info(f"Authentication aborted (no TOTP) for {callsign} from {self.remote_addr}")
                 return False
 
@@ -337,8 +362,8 @@ class TelnetSession:
                 await self.send("")
                 totp_code = await self.read_line("TOTP Code: ", timeout=60)
 
-                if totp_code is None:
-                    logger.info(f"Write operation aborted (timeout) for {self.callsign}")
+                if totp_code is None or any(c in totp_code for c in ('\x03', '\x04')):
+                    logger.info(f"Write operation aborted (timeout/interrupt) for {self.callsign}")
                     await self.send("Operation cancelled.")
                     continue
 
