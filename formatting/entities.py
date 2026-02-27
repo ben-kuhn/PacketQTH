@@ -196,7 +196,7 @@ def format_entity_detail(
 
     if domain == 'light':
         # Brightness
-        if 'brightness' in attributes:
+        if attributes.get('brightness') is not None:
             brightness_pct = int(attributes['brightness'] / 255 * 100)
             lines.append(f"Bright: {brightness_pct}%")
 
