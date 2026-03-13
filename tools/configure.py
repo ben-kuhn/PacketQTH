@@ -9,6 +9,7 @@ Interactive TUI wizard for initial configuration. Produces:
   docker-compose.generated.yml - Ready-to-use compose file
 """
 
+import copy
 import os
 import sys
 import asyncio
@@ -75,7 +76,6 @@ def save_env(values: dict[str, str], path: Path) -> None:
 
 def load_config(path: Path) -> dict[str, Any]:
     """Load config.yaml. Returns DEFAULT_CONFIG structure if file missing."""
-    import copy
     defaults = copy.deepcopy(DEFAULT_CONFIG)
     if not path.exists():
         return defaults
