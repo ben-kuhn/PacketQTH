@@ -7,6 +7,8 @@
 # QR Code Generation (for TOTP setup tool)
 # This pulls in Pillow (~3MB) but is only needed for initial setup
 qrcode[pil]>=7.4.0
+
+# Interactive TUI prompts (for configure.py setup wizard)
 prompt_toolkit>=3.0.0
 
 # Development/Testing Tools (optional)
