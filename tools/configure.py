@@ -462,5 +462,74 @@ def step_user_setup(users_path: Path) -> None:
     print(f"\n  Wrote {users_path}")
 
 
+# ---------------------------------------------------------------------------
+# Step 5: Docker Compose
+# ---------------------------------------------------------------------------
+
+def generate_compose(host_port: int, config_dir: str) -> str:
+    """Generate docker-compose YAML string from parameters."""
+    compose = {
+        "version": "3.8",
+        "services": {
+            "packetqth": {
+                "image": "ghcr.io/ben-kuhn/packetqth:latest",
+                "container_name": "packetqth",
+                "restart": "unless-stopped",
+                "ports": [f"127.0.0.1:{host_port}:8023"],
+                "volumes": [
+                    f"{config_dir}/config.yaml:/app/config.yaml:ro",
+                    f"{config_dir}/users.yaml:/app/users.yaml:ro",
+                    f"{config_dir}/logs:/app/logs",
+                ],
+                "environment": [
+                    "HA_TOKEN=${HA_TOKEN}",
+                    "LOG_LEVEL=${LOG_LEVEL:-INFO}",
+                ],
+                "networks": ["homeassistant"],
+                "security_opt": ["no-new-privileges:true"],
+                "cap_drop": ["ALL"],
+                "read_only": True,
+                "tmpfs": ["/tmp"],
+                "deploy": {
+                    "resources": {
+                        "limits": {"cpus": "0.5", "memory": "256M"},
+                        "reservations": {"cpus": "0.1", "memory": "64M"},
+                    }
+                },
+            }
+        },
+        "networks": {
+            "homeassistant": {"external": False, "driver": "bridge"}
+        },
+    }
+    return yaml.dump(compose, default_flow_style=False, sort_keys=False)
+
+
+def step_docker_compose(output_path: Path) -> None:
+    """Prompt for host port and config dir, write docker-compose.generated.yml."""
+    from prompt_toolkit import prompt
+    from prompt_toolkit.formatted_text import HTML
+
+    print("\n" + "=" * 60)
+    print("Step 5/5: Docker Compose")
+    print("=" * 60)
+
+    default_port = 8023
+    default_dir = str(Path.cwd())
+
+    port_str = prompt(HTML(f"Host port to expose telnet on [<ansigreen>{default_port}</ansigreen>]: ")).strip()
+    host_port = int(port_str) if port_str.isdigit() else default_port
+
+    config_dir = prompt(HTML(f"Config directory path [<ansigreen>{default_dir}</ansigreen>]: ")).strip() or default_dir
+
+    compose_yaml = generate_compose(host_port=host_port, config_dir=config_dir)
+    output_path.write_text(compose_yaml)
+
+    print(f"\n  Written to: {output_path}")
+    print("\n  To use it, run:")
+    print(f"    mv {output_path.name} docker-compose.yml")
+    print("    docker compose up -d")
+
+
 if __name__ == "__main__":
     print("PacketQTH Setup Wizard — run with: python tools/configure.py")

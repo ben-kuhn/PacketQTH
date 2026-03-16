@@ -198,3 +198,18 @@ def test_parse_totp_secret_returns_none_when_not_found():
     from tools.configure import parse_totp_secret_from_output
     secret = parse_totp_secret_from_output("W1AW", "no secret here")
     assert secret is None
+
+
+def test_generate_compose_uses_provided_port_and_path(tmp_path):
+    from tools.configure import generate_compose
+    result = generate_compose(host_port=9000, config_dir="/home/user/pqth")
+    loaded = yaml.safe_load(result)
+    assert "9000:8023" in loaded["services"]["packetqth"]["ports"][0]
+    assert "/home/user/pqth/config.yaml" in loaded["services"]["packetqth"]["volumes"][0]
+
+
+def test_generate_compose_default_port():
+    from tools.configure import generate_compose
+    result = generate_compose(host_port=8023, config_dir="/opt/pqth")
+    loaded = yaml.safe_load(result)
+    assert "8023:8023" in loaded["services"]["packetqth"]["ports"][0]
