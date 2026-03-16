@@ -517,8 +517,15 @@ def step_docker_compose(output_path: Path) -> None:
     default_port = 8023
     default_dir = str(Path.cwd())
 
-    port_str = prompt(HTML(f"Host port to expose telnet on [<ansigreen>{default_port}</ansigreen>]: ")).strip()
-    host_port = int(port_str) if port_str.isdigit() else default_port
+    while True:
+        port_str = prompt(HTML(f"Host port to expose telnet on [<ansigreen>{default_port}</ansigreen>]: ")).strip()
+        if not port_str:
+            host_port = default_port
+            break
+        if port_str.isdigit() and 1 <= int(port_str) <= 65535:
+            host_port = int(port_str)
+            break
+        print(f"  Invalid port {port_str!r} — must be 1–65535")
 
     config_dir = prompt(HTML(f"Config directory path [<ansigreen>{default_dir}</ansigreen>]: ")).strip() or default_dir
 

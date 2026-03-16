@@ -200,7 +200,7 @@ def test_parse_totp_secret_returns_none_when_not_found():
     assert secret is None
 
 
-def test_generate_compose_uses_provided_port_and_path(tmp_path):
+def test_generate_compose_uses_provided_port_and_path():
     from tools.configure import generate_compose
     result = generate_compose(host_port=9000, config_dir="/home/user/pqth")
     loaded = yaml.safe_load(result)
