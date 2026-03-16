@@ -500,7 +500,7 @@ def step_user_setup(users_path: Path) -> None:
 # Step 5: Docker Compose
 # ---------------------------------------------------------------------------
 
-def generate_compose(host_port: int, config_dir: str) -> str:
+def generate_compose(host_port: int, config_dir: str, uid: int, gid: int) -> str:
     """Generate docker-compose YAML string from parameters."""
     compose = {
         "services": {
@@ -508,6 +508,7 @@ def generate_compose(host_port: int, config_dir: str) -> str:
                 "image": "ghcr.io/ben-kuhn/packetqth:latest",
                 "container_name": "packetqth",
                 "restart": "unless-stopped",
+                "user": f"{uid}:{gid}",
                 "ports": [f"127.0.0.1:{host_port}:8023"],
                 "volumes": [
                     f"{config_dir}/config.yaml:/app/config.yaml:ro",
@@ -563,10 +564,20 @@ def step_docker_compose(output_path: Path) -> None:
     config_dir_input = prompt(HTML(f"Config directory path [<ansigreen>{default_dir}</ansigreen>]: ")).strip() or default_dir
     config_dir = str(Path(config_dir_input).resolve())
 
-    compose_yaml = generate_compose(host_port=host_port, config_dir=config_dir)
+    # Create logs directory next to config files so the container can write to it
+    logs_dir = Path(config_dir) / "logs"
+    logs_dir.mkdir(exist_ok=True)
+
+    compose_yaml = generate_compose(
+        host_port=host_port,
+        config_dir=config_dir,
+        uid=os.getuid(),
+        gid=os.getgid(),
+    )
     output_path.write_text(compose_yaml)
 
     print(f"\n  Written to: {output_path}")
+    print(f"  Logs directory: {logs_dir}")
     print("\n  To use it, run:")
     print(f"    mv {output_path.name} docker-compose.yml")
     print("    docker compose up -d")

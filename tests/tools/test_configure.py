@@ -209,17 +209,19 @@ def test_parse_totp_secret_returns_none_when_not_found():
 
 def test_generate_compose_uses_provided_port_and_path():
     from tools.configure import generate_compose
-    result = generate_compose(host_port=9000, config_dir="/home/user/pqth")
+    result = generate_compose(host_port=9000, config_dir="/home/user/pqth", uid=1000, gid=1000)
     loaded = yaml.safe_load(result)
     assert "9000:8023" in loaded["services"]["packetqth"]["ports"][0]
     assert "/home/user/pqth/config.yaml" in loaded["services"]["packetqth"]["volumes"][0]
+    assert loaded["services"]["packetqth"]["user"] == "1000:1000"
 
 
 def test_generate_compose_default_port():
     from tools.configure import generate_compose
-    result = generate_compose(host_port=8023, config_dir="/opt/pqth")
+    result = generate_compose(host_port=8023, config_dir="/opt/pqth", uid=1001, gid=1002)
     loaded = yaml.safe_load(result)
     assert "8023:8023" in loaded["services"]["packetqth"]["ports"][0]
+    assert loaded["services"]["packetqth"]["user"] == "1001:1002"
 
 
 def test_load_config_preserves_null_values_from_file(tmp_path):
