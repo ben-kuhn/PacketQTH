@@ -36,15 +36,20 @@ docker-compose up -d
 ### Tools Image: `ghcr.io/ben-kuhn/packetqth-tools`
 
 **Use for:**
+- Interactive setup wizard (generates all config files)
 - Generating TOTP secrets with QR codes
-- Initial TOTP setup
 - Running security audits
 - Development and testing
 - Any operation requiring tools dependencies
 
 **Example:**
 ```bash
-# Generate TOTP with QR code
+# Full setup wizard (Podman):
+podman run --rm -it --userns=keep-id -v $(pwd):/config \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
+
+# Generate TOTP with QR code (Docker/Podman, no volume mount needed):
 docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest \
   python tools/setup_totp.py YOUR_CALLSIGN
 
@@ -59,23 +64,21 @@ docker run --rm ghcr.io/ben-kuhn/packetqth-tools:latest \
 
 ## Typical Workflow
 
-1. **Setup phase** - Use tools image:
+1. **Setup phase** - Use tools image interactive wizard:
    ```bash
-   # Generate TOTP secrets
-   docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest \
-     python tools/setup_totp.py YOUR_CALLSIGN
+   # Podman (rootless):
+   podman run --rm -it --userns=keep-id -v $(pwd):/config \
+     ghcr.io/ben-kuhn/packetqth-tools:latest \
+     python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
+   # Docker:
+   docker run --rm -it --user $(id -u):$(id -g) -v $(pwd):/config \
+     ghcr.io/ben-kuhn/packetqth-tools:latest \
+     python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
    ```
+   Wizard generates `config.yaml`, `.env`, `users.yaml`, and `docker-compose.generated.yml`.
 
-2. **Configuration** - Edit files on host:
+2. **Production** - Use runtime image:
    ```bash
-   cp config.yaml.example config.yaml
-   cp users.yaml.example users.yaml
-   # Add TOTP secret from step 1
-   ```
-
-3. **Production** - Use runtime image:
-   ```bash
-   # docker-compose.yml uses runtime image by default
    docker-compose up -d
    ```
 

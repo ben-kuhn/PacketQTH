@@ -38,18 +38,40 @@ docker pull ghcr.io/ben-kuhn/packetqth:latest
 
 **Image:** `ghcr.io/ben-kuhn/packetqth-tools`
 
-Includes tools dependencies (qrcode, Pillow) for TOTP setup with QR codes (~3MB extra).
+Includes tools dependencies (qrcode, Pillow, prompt_toolkit) for TOTP setup and the interactive setup wizard (~3MB extra).
 
 **Available tags:** Same as runtime image with `-tools` suffix
 
-**Use for TOTP setup:**
+**Recommended: Full setup wizard (generates all config files interactively):**
 ```bash
-# Generate TOTP with terminal QR code
+# Podman (rootless):
+podman run --rm -it \
+  --userns=keep-id \
+  -v $(pwd):/config \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
+
+# Docker:
+docker run --rm -it \
+  --user $(id -u):$(id -g) \
+  -v $(pwd):/config \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
+```
+
+**TOTP generation only (for adding individual users):**
+```bash
+# Generate TOTP with terminal QR code (no volume mount needed)
 docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest \
   python tools/setup_totp.py YOUR_CALLSIGN
 
-# Generate TOTP and save QR as PNG
-docker run --rm -v $(pwd):/output \
+# Generate TOTP and save QR as PNG (writes to host directory)
+# Podman:
+podman run --rm --userns=keep-id -v $(pwd):/output \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/setup_totp.py YOUR_CALLSIGN --qr-file /output/qr.png
+# Docker:
+docker run --rm --user $(id -u):$(id -g) -v $(pwd):/output \
   ghcr.io/ben-kuhn/packetqth-tools:latest \
   python tools/setup_totp.py YOUR_CALLSIGN --qr-file /output/qr.png
 ```
@@ -71,22 +93,19 @@ See [.github/workflows/README.md](.github/workflows/README.md) for details.
 
 **Using Pre-Built Tools Image (Recommended):**
 ```bash
-# 1. Setup TOTP using pre-built tools image
-docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest \
-  python tools/setup_totp.py YOUR_CALLSIGN
+# 1. Run the interactive setup wizard (generates config.yaml, .env, users.yaml, docker-compose)
+# Podman:
+podman run --rm -it --userns=keep-id -v $(pwd):/config \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
+# Docker:
+docker run --rm -it --user $(id -u):$(id -g) -v $(pwd):/config \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
 
-# Scan QR code displayed in terminal with your phone
-# Or save to file:
-# docker run --rm -v $(pwd):/output ghcr.io/ben-kuhn/packetqth-tools:latest \
-#   python tools/setup_totp.py YOUR_CALLSIGN --qr-file /output/qr.png
+# Scan the QR code shown during user setup, then:
 
-# 2. Configure
-cp config.yaml.example config.yaml
-cp users.yaml.example users.yaml
-nano users.yaml  # Add TOTP secret from step 1
-nano config.yaml # Set HomeAssistant URL
-
-# 3. Run container (uses runtime image)
+# 2. Run container
 docker-compose up -d
 ```
 
@@ -482,6 +501,15 @@ chmod 644 config.yaml users.yaml
 # Check permissions
 ls -l config.yaml users.yaml
 # Should show: -rw-r--r--
+```
+
+**Problem:** Setup wizard (`configure.py`) fails with `PermissionError` when writing to `/config`
+
+**Solution:** Rootless Podman requires `--userns=keep-id` to map your host uid into the container. `--user $(id -u):$(id -g)` does not work correctly with rootless Podman — use `--userns=keep-id` instead:
+```bash
+podman run --rm -it --userns=keep-id -v $(pwd):/config \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
 ```
 
 ### Container Can't Connect to HomeAssistant

@@ -96,28 +96,35 @@ cd packetqth
 
 2. **Set up users:**
 
-**Option A: Pre-Built Tools Image** ⭐ Recommended
+**Option A: Interactive Setup Wizard** ⭐ Recommended
 ```bash
-# Generate TOTP using pre-built tools image (no installation needed!)
+# Generates config.yaml, .env, users.yaml, and docker-compose.generated.yml
+# Podman (rootless):
+podman run --rm -it --userns=keep-id -v $(pwd):/config \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
+
+# Docker:
+docker run --rm -it --user $(id -u):$(id -g) -v $(pwd):/config \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
+```
+
+**Option B: TOTP Only (Pre-Built Tools Image)**
+```bash
+# Generate TOTP with terminal QR code (no installation needed!)
 docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest \
   python tools/setup_totp.py KN4XYZ
 
 # Scan the ASCII QR code displayed in terminal with your authenticator app
-
-# Or save QR code to file:
-docker run --rm -v $(pwd):/output ghcr.io/ben-kuhn/packetqth-tools:latest \
-  python tools/setup_totp.py KN4XYZ --qr-file /output/qr.png
 ```
 
-**Option B: Build Tools Image Locally**
+**Option C: Build Tools Image Locally**
 ```bash
-# Build and run tools image locally
 ./tools/docker-setup.sh KN4XYZ
-
-# Scan the ASCII QR code displayed in terminal
 ```
 
-**Option C: Simple Python (No Packages)**
+**Option D: Simple Python (No Packages)**
 ```bash
 # Generate secret using only Python stdlib
 python3 tools/generate_secret.py KN4XYZ
@@ -125,22 +132,10 @@ python3 tools/generate_secret.py KN4XYZ
 # Manually enter the displayed secret into your authenticator app
 ```
 
-**Option D: Full Setup Tool (Requires Python Packages)**
+**Add User to Configuration (if not using wizard):**
 ```bash
-# Install tools dependencies on host
-pip3 install -r requirements-tools.txt
-
-# Generate with QR code
-python3 tools/setup_totp.py KN4XYZ
-```
-
-**Add User to Configuration:**
-```bash
-# Copy example users file
 cp users.yaml.example users.yaml
-
-# Add your TOTP secret to users.yaml
-nano users.yaml
+nano users.yaml  # Add TOTP secret from Option B/C/D
 ```
 
 **Note:** See [DOCKER.md](DOCKER.md) for detailed Docker setup instructions.

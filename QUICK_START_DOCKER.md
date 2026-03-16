@@ -4,35 +4,55 @@ Complete setup using only Docker (no Python installation required on host).
 
 ## Prerequisites
 
-- Docker installed
+- Docker or Podman installed
 - HomeAssistant with API access
 
 ## Setup Steps
 
-### 1. Generate TOTP Secret
+### 1. Run the Setup Wizard
 
-Use the pre-built tools image to generate your TOTP secret:
+The interactive setup wizard generates all config files (`config.yaml`, `.env`, `users.yaml`, `docker-compose.generated.yml`) in one step:
 
 ```bash
-# Generate TOTP with terminal QR code
+# Podman (rootless) — use --userns=keep-id for volume mounts:
+podman run --rm -it \
+  --userns=keep-id \
+  -v $(pwd):/config \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
+
+# Docker:
+docker run --rm -it \
+  --user $(id -u):$(id -g) \
+  -v $(pwd):/config \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
+```
+
+The wizard will prompt for:
+- HomeAssistant URL and API token (tests connection)
+- Telnet server port and timeout settings
+- Entity filter (which HA domains/entities to expose)
+- First user callsign (generates TOTP, displays QR code to scan)
+- Docker host port for the generated compose file
+
+**Scan the QR code** displayed during user setup with your authenticator app (Google Authenticator, Authy, etc.)
+
+**Alternative (TOTP only):** If you only need to generate a TOTP secret without the wizard:
+```bash
+# Terminal QR code (no volume mount needed):
 docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest \
   python tools/setup_totp.py YOUR_CALLSIGN
 
-# The tool will display:
-# - Your TOTP secret (save this!)
-# - ASCII QR code (scan with phone)
-# - Configuration snippet
-```
-
-**Scan the QR code** with your authenticator app (Google Authenticator, Authy, etc.)
-
-**Alternative:** Save QR code as PNG file:
-```bash
-docker run --rm -v $(pwd):/output \
+# Save QR code as PNG (writes to host directory):
+# Podman:
+podman run --rm --userns=keep-id -v $(pwd):/output \
   ghcr.io/ben-kuhn/packetqth-tools:latest \
   python tools/setup_totp.py YOUR_CALLSIGN --qr-file /output/qr.png
-
-# Open qr.png and scan with your phone
+# Docker:
+docker run --rm --user $(id -u):$(id -g) -v $(pwd):/output \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/setup_totp.py YOUR_CALLSIGN --qr-file /output/qr.png
 ```
 
 ### 2. Clone Repository
@@ -42,54 +62,9 @@ git clone https://github.com/ben-kuhn/packetqth.git
 cd packetqth
 ```
 
-### 3. Create Configuration Files
+> **Note:** If you ran the wizard before cloning, move the generated config files into the cloned directory.
 
-**Create config.yaml:**
-```bash
-cp config.yaml.example config.yaml
-nano config.yaml
-```
-
-Update:
-- `homeassistant.url` - Your HomeAssistant URL
-- Other settings as needed
-
-**Create users.yaml:**
-```bash
-cp users.yaml.example users.yaml
-nano users.yaml
-```
-
-Add your TOTP secret from step 1:
-```yaml
-users:
-  YOUR_CALLSIGN: "JBSWY3DPEHPK3PXP"  # Replace with your actual secret
-
-security:
-  max_failed_attempts: 5
-  lockout_duration_seconds: 300
-  session_timeout_seconds: 300
-```
-
-**Create .env file:**
-```bash
-cp .env.example .env
-nano .env
-```
-
-Add your HomeAssistant token:
-```
-HA_TOKEN=your_long_lived_access_token_here
-```
-
-To create a token:
-1. Open HomeAssistant
-2. Click your profile (bottom left)
-3. Scroll to "Long-Lived Access Tokens"
-4. Click "Create Token"
-5. Copy the token to `.env`
-
-### 4. Start PacketQTH
+### 3. Start PacketQTH
 
 ```bash
 # Pull the runtime image (if not already pulled)
@@ -205,6 +180,17 @@ docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest \
   python tools/setup_totp.py YOUR_CALLSIGN
 ```
 
+### Permission Denied When Running Setup Wizard
+
+**Problem:** `PermissionError` writing to `/config` when running `configure.py`
+
+**Solution:** Rootless Podman maps `--user $(id -u):$(id -g)` to a subuid, not your real host uid. Use `--userns=keep-id` instead:
+```bash
+podman run --rm -it --userns=keep-id -v $(pwd):/config \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
+```
+
 ### Container won't start
 
 Check logs:
@@ -241,11 +227,11 @@ ports:
 ### Add Another User
 
 ```bash
-# Generate TOTP for new user
+# Generate TOTP for new user (prints secret + QR code to terminal)
 docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest \
   python tools/setup_totp.py W1ABC
 
-# Add to users.yaml
+# Add secret to users.yaml
 nano users.yaml
 
 # Restart
@@ -289,8 +275,14 @@ docker run --rm ghcr.io/ben-kuhn/packetqth-tools:latest \
 
 **Two images, two purposes:**
 
-1. **Tools image** (`packetqth-tools`) - Used ONCE for setup:
+1. **Tools image** (`packetqth-tools`) - Used for setup:
    ```bash
+   # Full wizard (recommended — generates all config files):
+   podman run --rm -it --userns=keep-id -v $(pwd):/config \
+     ghcr.io/ben-kuhn/packetqth-tools:latest \
+     python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
+
+   # TOTP only (for adding individual users):
    docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest \
      python tools/setup_totp.py YOUR_CALLSIGN
    ```

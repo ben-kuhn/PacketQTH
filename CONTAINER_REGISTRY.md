@@ -18,14 +18,24 @@ docker pull ghcr.io/ben-kuhn/packetqth:latest
 docker-compose up -d
 ```
 
-**Tools image (TOTP setup):**
+**Tools image (setup wizard and TOTP):**
 ```bash
-# Generate TOTP secret with QR code
+# Full setup wizard — generates all config files (Podman):
+podman run --rm -it --userns=keep-id -v $(pwd):/config \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
+
+# Full setup wizard (Docker):
+docker run --rm -it --user $(id -u):$(id -g) -v $(pwd):/config \
+  ghcr.io/ben-kuhn/packetqth-tools:latest \
+  python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
+
+# Generate TOTP secret with terminal QR code (no volume mount needed):
 docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest \
   python tools/setup_totp.py YOUR_CALLSIGN
 
-# Save QR code to file
-docker run --rm -v $(pwd):/output \
+# Save QR code to file (Podman):
+podman run --rm --userns=keep-id -v $(pwd):/output \
   ghcr.io/ben-kuhn/packetqth-tools:latest \
   python tools/setup_totp.py YOUR_CALLSIGN --qr-file /output/qr.png
 ```
