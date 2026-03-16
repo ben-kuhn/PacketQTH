@@ -179,3 +179,22 @@ def test_group_entities_by_domain_groups_and_sorts():
     assert "light" in grouped
     assert "switch" in grouped
     assert grouped["light"] == sorted(grouped["light"])
+
+
+def test_parse_totp_secret_from_output_extracts_secret():
+    from tools.configure import parse_totp_secret_from_output
+    output = (
+        "============================================================\n"
+        "Add this to your users.yaml file:\n"
+        "============================================================\n"
+        '  W1AW: "JBSWY3DPEHPK3PXP"\n'
+        "============================================================\n"
+    )
+    secret = parse_totp_secret_from_output("W1AW", output)
+    assert secret == "JBSWY3DPEHPK3PXP"
+
+
+def test_parse_totp_secret_returns_none_when_not_found():
+    from tools.configure import parse_totp_secret_from_output
+    secret = parse_totp_secret_from_output("W1AW", "no secret here")
+    assert secret is None

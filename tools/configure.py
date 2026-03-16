@@ -387,5 +387,78 @@ def step_entity_filter(config: dict, config_path: Path, ha_url: str, ha_token: s
     print(f"  Wrote {config_path}")
 
 
+# ---------------------------------------------------------------------------
+# Step 4: Initial User Setup
+# ---------------------------------------------------------------------------
+
+def parse_totp_secret_from_output(callsign: str, output: str) -> str | None:
+    """
+    Extract TOTP secret from setup_totp.py output.
+    Looks for line: '  CALLSIGN: "SECRET"'
+    """
+    import re
+    pattern = rf'^\s+{re.escape(callsign.upper())}:\s+"([A-Z2-7]+)"'
+    for line in output.splitlines():
+        m = re.match(pattern, line, re.IGNORECASE)
+        if m:
+            return m.group(1)
+    return None
+
+
+def step_user_setup(users_path: Path) -> None:
+    """
+    Prompt for callsign, run setup_totp.py, write users.yaml.
+    Skippable if users.yaml already has entries.
+    """
+    from prompt_toolkit import prompt
+
+    print("\n" + "=" * 60)
+    print("Step 4/5: Initial User Setup")
+    print("=" * 60)
+
+    existing_users = load_users(users_path)
+    if existing_users:
+        user_list = ", ".join(existing_users.keys())
+        skip = prompt(f"users.yaml already has users ({user_list}). Add another? [y/N]: ").strip().lower()
+        if skip != "y":
+            print("  Skipped.")
+            return
+
+    callsign = prompt("Callsign: ").strip().upper()
+    if not callsign:
+        print("  No callsign entered — skipping.")
+        return
+
+    # Run setup_totp.py, forwarding output to terminal while capturing it
+    script = Path(__file__).parent / "setup_totp.py"
+    print()
+    collected_lines = []
+    try:
+        proc = subprocess.Popen(
+            [sys.executable, str(script), callsign],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        for line in proc.stdout:
+            print(line, end="", flush=True)
+            collected_lines.append(line)
+        proc.wait()
+    except FileNotFoundError:
+        print(f"  Error: could not find {script}")
+        return
+
+    output = "".join(collected_lines)
+    secret = parse_totp_secret_from_output(callsign, output)
+    if not secret:
+        print("\n  Warning: could not extract secret from output — users.yaml not updated.")
+        print(f"  Add it manually: {callsign}: \"<SECRET>\"")
+        return
+
+    existing_users[callsign] = secret
+    save_users(existing_users, users_path)
+    print(f"\n  Wrote {users_path}")
+
+
 if __name__ == "__main__":
     print("PacketQTH Setup Wizard — run with: python tools/configure.py")
