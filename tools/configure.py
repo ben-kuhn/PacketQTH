@@ -188,5 +188,62 @@ def step_ha_connection(config: dict, env: dict, config_path: Path, env_path: Pat
     return url, token
 
 
+# ---------------------------------------------------------------------------
+# Step 2: Server Config
+# ---------------------------------------------------------------------------
+
+def parse_server_inputs(port: str, timeout: str, max_attempts: str) -> dict:
+    """Parse and validate server config inputs. Uses defaults for empty strings."""
+    def _int(val: str, default: int, name: str) -> int:
+        if not val.strip():
+            return default
+        try:
+            return int(val.strip())
+        except ValueError:
+            raise ValueError(f"Invalid {name}: {val!r} — must be an integer")
+
+    return {
+        "port": _int(port, 8023, "port"),
+        "timeout_seconds": _int(timeout, 300, "timeout"),
+        "max_auth_attempts": _int(max_attempts, 3, "max_attempts"),
+    }
+
+
+def step_server_config(config: dict, config_path: Path) -> None:
+    """Prompt for server settings and write to config.yaml."""
+    from prompt_toolkit import prompt
+    from prompt_toolkit.formatted_text import HTML
+
+    print("\n" + "=" * 60)
+    print("Step 2/5: Server Settings")
+    print("=" * 60)
+
+    telnet = config.get("telnet", {})
+    security = config.get("security", {})
+
+    cur_port = telnet.get("port", 8023)
+    cur_timeout = telnet.get("timeout_seconds", 300)
+    cur_attempts = security.get("max_auth_attempts", 3)
+
+    while True:
+        try:
+            inputs = parse_server_inputs(
+                port=prompt(HTML(f"Telnet port [<ansigreen>{cur_port}</ansigreen>]: ")).strip(),
+                timeout=prompt(HTML(f"Session timeout in seconds [<ansigreen>{cur_timeout}</ansigreen>]: ")).strip(),
+                max_attempts=prompt(HTML(f"Max failed auth attempts [<ansigreen>{cur_attempts}</ansigreen>]: ")).strip(),
+            )
+            break
+        except ValueError as e:
+            print(f"  Error: {e} — please try again")
+
+    config.setdefault("telnet", {}).update({
+        "port": inputs["port"],
+        "timeout_seconds": inputs["timeout_seconds"],
+    })
+    config.setdefault("security", {})["max_auth_attempts"] = inputs["max_auth_attempts"]
+    save_config(config, config_path)
+    print(f"  Wrote {config_path}")
+
+
 if __name__ == "__main__":
     print("PacketQTH Setup Wizard — run with: python tools/configure.py")

@@ -118,3 +118,25 @@ async def test_test_ha_connection_returns_error_on_network_failure():
         count, err = await test_ha_connection("http://ha.local:8123", "token")
     assert count is None
     assert err is not None
+
+
+def test_parse_server_inputs_uses_defaults_for_empty():
+    from tools.configure import parse_server_inputs
+    result = parse_server_inputs(port="", timeout="", max_attempts="")
+    assert result["port"] == 8023
+    assert result["timeout_seconds"] == 300
+    assert result["max_auth_attempts"] == 3
+
+
+def test_parse_server_inputs_uses_provided_values():
+    from tools.configure import parse_server_inputs
+    result = parse_server_inputs(port="9000", timeout="600", max_attempts="5")
+    assert result["port"] == 9000
+    assert result["timeout_seconds"] == 600
+    assert result["max_auth_attempts"] == 5
+
+
+def test_parse_server_inputs_rejects_invalid_port():
+    from tools.configure import parse_server_inputs
+    with pytest.raises(ValueError, match="port"):
+        parse_server_inputs(port="notanumber", timeout="300", max_attempts="3")
