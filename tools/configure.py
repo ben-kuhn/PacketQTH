@@ -9,10 +9,12 @@ Interactive TUI wizard for initial configuration. Produces:
   docker-compose.generated.yml - Ready-to-use compose file
 """
 
+import argparse
+import asyncio
 import copy
 import os
+import re
 import sys
-import asyncio
 import subprocess
 import aiohttp
 import yaml
@@ -134,12 +136,17 @@ def _deep_merge(base: dict, override: dict) -> None:
 # Step 1: HomeAssistant Connection
 # ---------------------------------------------------------------------------
 
+def _ha_headers(token: str) -> dict[str, str]:
+    """Return Authorization headers for HA API requests."""
+    return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+
 async def test_ha_connection(url: str, token: str) -> tuple[int | None, str | None]:
     """
     Test HA connection by fetching /api/states.
     Returns (entity_count, None) on success or (None, error_message) on failure.
     """
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    headers = _ha_headers(token)
     try:
         timeout = aiohttp.ClientTimeout(total=10)
         async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -219,8 +226,11 @@ def parse_server_inputs(port: str, timeout: str, max_attempts: str) -> dict:
         except ValueError:
             raise ValueError(f"Invalid {name}: {val!r} — must be an integer")
 
+    port_val = _int(port, 8023, "port")
+    if not (1 <= port_val <= 65535):
+        raise ValueError(f"Invalid port: {port_val} — must be 1–65535")
     return {
-        "port": _int(port, 8023, "port"),
+        "port": port_val,
         "timeout_seconds": _int(timeout, 300, "timeout"),
         "max_auth_attempts": _int(max_attempts, 3, "max_attempts"),
     }
@@ -268,7 +278,7 @@ def step_server_config(config: dict, config_path: Path) -> None:
 
 async def fetch_all_entities(url: str, token: str) -> list[dict]:
     """Fetch all entity states from HA API."""
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    headers = _ha_headers(token)
     timeout = aiohttp.ClientTimeout(total=10)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         resp = await session.get(f"{url.rstrip('/')}/api/states", headers=headers)
@@ -397,7 +407,7 @@ def step_entity_filter(config: dict, config_path: Path, ha_url: str, ha_token: s
         "include_domains": inc_domains,
         "exclude_domains": None,
         "include_entities": None,
-        "exclude_entities": exc_entities or None,
+        "exclude_entities": exc_entities,
     })
     save_config(config, config_path)
     print(f"  {len(inc_domains)} domains, {len(exc_entities)} excluded entities")
@@ -413,7 +423,6 @@ def parse_totp_secret_from_output(callsign: str, output: str) -> str | None:
     Extract TOTP secret from setup_totp.py output.
     Looks for line: '  CALLSIGN: "SECRET"'
     """
-    import re
     pattern = rf'^\s+{re.escape(callsign.upper())}:\s+"([A-Z2-7]+)"'
     for line in output.splitlines():
         m = re.match(pattern, line)
@@ -561,7 +570,6 @@ def step_docker_compose(output_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    import argparse
     parser = argparse.ArgumentParser(description="PacketQTH Setup Wizard")
     parser.add_argument("--config", default="config.yaml", help="Path to config.yaml")
     parser.add_argument("--env", default=".env", help="Path to .env file")

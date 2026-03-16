@@ -142,6 +142,14 @@ def test_parse_server_inputs_rejects_invalid_port():
         parse_server_inputs(port="notanumber", timeout="300", max_attempts="3")
 
 
+def test_parse_server_inputs_rejects_out_of_range_port():
+    from tools.configure import parse_server_inputs
+    with pytest.raises(ValueError, match="port"):
+        parse_server_inputs(port="0", timeout="300", max_attempts="3")
+    with pytest.raises(ValueError, match="port"):
+        parse_server_inputs(port="65536", timeout="300", max_attempts="3")
+
+
 def test_build_entity_filter_excludes_unselected_within_domain():
     from tools.configure import build_entity_filter
     all_entities = [
