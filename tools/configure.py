@@ -366,6 +366,12 @@ def step_entity_filter(config: dict, config_path: Path, ha_url: str, ha_token: s
         if chosen is None:
             print(f"  Cancelled on domain '{domain}' — keeping existing config.")
             return
+        if not chosen:
+            print(f"  Warning: no entities selected for '{domain}' — all {len(domain_eids)} will be excluded.")
+            confirm = prompt("Continue anyway? [y/N]: ").strip().lower()
+            if confirm != "y":
+                print("  Cancelled — keeping existing entity_filter config.")
+                return
         selected_entities[domain] = chosen
 
     inc_domains, exc_entities = build_entity_filter(entities, selected_domains, selected_entities)
@@ -374,7 +380,7 @@ def step_entity_filter(config: dict, config_path: Path, ha_url: str, ha_token: s
         "include_domains": inc_domains,
         "exclude_domains": None,
         "include_entities": None,
-        "exclude_entities": exc_entities,
+        "exclude_entities": exc_entities or None,
     })
     save_config(config, config_path)
     print(f"  {len(inc_domains)} domains, {len(exc_entities)} excluded entities")
