@@ -70,9 +70,19 @@ def load_env(path: Path) -> dict[str, str]:
 
 
 def save_env(values: dict[str, str], path: Path) -> None:
-    """Write dict to .env file."""
-    lines = [f"{k}={v}\n" for k, v in values.items()]
-    path.write_text("".join(lines))
+    """Write dict to .env file with owner-only permissions (0o600).
+
+    Callers must pass the full env dict (loaded via load_env) with their
+    changes merged in — this function replaces the entire file.
+    """
+    content = "".join(f"{k}={v}\n" for k, v in values.items())
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        os.write(fd, content.encode())
+    finally:
+        os.close(fd)
+    # Ensure permissions are correct even if file already existed
+    os.chmod(path, 0o600)
 
 
 def load_config(path: Path) -> dict[str, Any]:
@@ -100,8 +110,15 @@ def load_users(path: Path) -> dict[str, str]:
 
 
 def save_users(users: dict[str, str], path: Path) -> None:
-    """Write users dict to users.yaml under 'users' key."""
-    path.write_text(yaml.dump({"users": users}, default_flow_style=False))
+    """Write users dict to users.yaml under 'users' key with owner-only permissions (0o600)."""
+    content = yaml.dump({"users": users}, default_flow_style=False)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        os.write(fd, content.encode())
+    finally:
+        os.close(fd)
+    # Ensure permissions are correct even if file already existed
+    os.chmod(path, 0o600)
 
 
 def _deep_merge(base: dict, override: dict) -> None:
@@ -527,7 +544,8 @@ def step_docker_compose(output_path: Path) -> None:
             break
         print(f"  Invalid port {port_str!r} — must be 1–65535")
 
-    config_dir = prompt(HTML(f"Config directory path [<ansigreen>{default_dir}</ansigreen>]: ")).strip() or default_dir
+    config_dir_input = prompt(HTML(f"Config directory path [<ansigreen>{default_dir}</ansigreen>]: ")).strip() or default_dir
+    config_dir = str(Path(config_dir_input).resolve())
 
     compose_yaml = generate_compose(host_port=host_port, config_dir=config_dir)
     output_path.write_text(compose_yaml)
