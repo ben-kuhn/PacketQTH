@@ -4,6 +4,13 @@
 # Use this for running the setup wizard or generating TOTP secrets with QR codes
 #
 # Usage (setup wizard):
+#   # Podman (rootless):
+#   podman run --rm -it \
+#     --userns=keep-id \
+#     -v $(pwd):/config \
+#     ghcr.io/ben-kuhn/packetqth-tools:latest \
+#     python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
+#   # Docker:
 #   docker run --rm -it \
 #     --user $(id -u):$(id -g) \
 #     -v $(pwd):/config \
@@ -49,4 +56,4 @@ COPY . .
 USER packetqth
 
 # Default command shows available tools
-CMD ["sh", "-c", "echo 'PacketQTH Tools Container' && echo '' && echo 'Available tools:' && ls -1 tools/*.py | sed 's|tools/||' && echo '' && echo 'Usage examples:' && echo '  Run setup wizard (writes config files to current directory):' && echo '    docker run --rm -it --user $(id -u):$(id -g) -v $(pwd):/config ghcr.io/ben-kuhn/packetqth-tools:latest python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml' && echo '' && echo '  Generate TOTP with QR code:' && echo '    docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest python tools/setup_totp.py YOUR_CALLSIGN' && echo '' && echo '  Generate TOTP without dependencies:' && echo '    docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest python tools/generate_secret.py YOUR_CALLSIGN' && echo '' && echo '  Save QR code to file:' && echo '    docker run --rm -v $(pwd):/output ghcr.io/ben-kuhn/packetqth-tools:latest python tools/setup_totp.py YOUR_CALLSIGN --qr-file /output/qr.png'"]
+CMD ["sh", "-c", "echo 'PacketQTH Tools Container' && echo '' && echo 'Available tools:' && ls -1 tools/*.py | sed 's|tools/||' && echo '' && echo 'Usage examples:' && echo '  Run setup wizard (writes config files to current directory):' && echo '    podman run --rm -it --userns=keep-id -v $(pwd):/config ghcr.io/ben-kuhn/packetqth-tools:latest python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml' && echo '    # Docker: replace --userns=keep-id with --user $(id -u):$(id -g)' && echo '' && echo '  Generate TOTP with QR code:' && echo '    docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest python tools/setup_totp.py YOUR_CALLSIGN' && echo '' && echo '  Generate TOTP without dependencies:' && echo '    docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest python tools/generate_secret.py YOUR_CALLSIGN' && echo '' && echo '  Save QR code to file:' && echo '    docker run --rm -v $(pwd):/output ghcr.io/ben-kuhn/packetqth-tools:latest python tools/setup_totp.py YOUR_CALLSIGN --qr-file /output/qr.png'"]
