@@ -70,7 +70,7 @@ def test_save_users_writes_yaml_with_users_key(tmp_path):
 async def test_test_ha_connection_returns_count_on_success():
     from tools.configure import test_ha_connection
     mock_states = [{"entity_id": "light.kitchen"}, {"entity_id": "switch.fan"}]
-    with patch("aiohttp.ClientSession") as MockSession:
+    with patch("tools.configure.aiohttp.ClientSession") as MockSession:
         mock_resp = AsyncMock()
         mock_resp.status = 200
         mock_resp.json = AsyncMock(return_value=mock_states)
@@ -89,7 +89,7 @@ async def test_test_ha_connection_returns_count_on_success():
 @pytest.mark.asyncio
 async def test_test_ha_connection_returns_error_on_auth_failure():
     from tools.configure import test_ha_connection
-    with patch("aiohttp.ClientSession") as MockSession:
+    with patch("tools.configure.aiohttp.ClientSession") as MockSession:
         mock_resp = AsyncMock()
         mock_resp.status = 401
         mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
@@ -107,7 +107,7 @@ async def test_test_ha_connection_returns_error_on_auth_failure():
 @pytest.mark.asyncio
 async def test_test_ha_connection_returns_error_on_network_failure():
     from tools.configure import test_ha_connection
-    with patch("aiohttp.ClientSession") as MockSession:
+    with patch("tools.configure.aiohttp.ClientSession") as MockSession:
         mock_session = AsyncMock()
         mock_session.get.side_effect = aiohttp.ClientConnectorError(
             MagicMock(), OSError("connection refused")

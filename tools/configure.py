@@ -14,6 +14,7 @@ import os
 import sys
 import asyncio
 import subprocess
+import aiohttp
 import yaml
 from pathlib import Path
 from typing import Any
@@ -121,10 +122,10 @@ async def test_ha_connection(url: str, token: str) -> tuple[int | None, str | No
     Test HA connection by fetching /api/states.
     Returns (entity_count, None) on success or (None, error_message) on failure.
     """
-    import aiohttp
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     try:
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=10)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             resp = await session.get(f"{url.rstrip('/')}/api/states", headers=headers)
             if resp.status == 401:
                 return None, "Unauthorized (401) — check your token"
@@ -153,37 +154,37 @@ def step_ha_connection(config: dict, env: dict, config_path: Path, env_path: Pat
     current_url = config.get("homeassistant", {}).get("url", DEFAULT_CONFIG["homeassistant"]["url"])
     current_token = env.get("HA_TOKEN", "")
 
-    url = prompt(
-        HTML(f"HomeAssistant URL [<ansigreen>{current_url}</ansigreen>]: "),
-    ).strip() or current_url
+    while True:
+        url = prompt(
+            HTML(f"HomeAssistant URL [<ansigreen>{current_url}</ansigreen>]: "),
+        ).strip() or current_url
 
-    token_hint = f"***{current_token[-6:]}" if len(current_token) > 6 else ("(set)" if current_token else "(not set)")
-    token = prompt(
-        HTML(f"HA Long-Lived Access Token [<ansigreen>{token_hint}</ansigreen>]: "),
-        is_password=True,
-    ).strip() or current_token
+        token_hint = f"***{current_token[-6:]}" if len(current_token) > 6 else ("(set)" if current_token else "(not set)")
+        token = prompt(
+            HTML(f"HA Long-Lived Access Token [<ansigreen>{token_hint}</ansigreen>]: "),
+            is_password=True,
+        ).strip() or current_token
 
-    # Test connection
-    print("\nTesting connection...", end=" ", flush=True)
-    count, err = asyncio.run(test_ha_connection(url, token))
-    if err:
+        print("\nTesting connection...", end=" ", flush=True)
+        count, err = asyncio.run(test_ha_connection(url, token))
+        if not err:
+            print(f"Connected ({count} entities found)")
+            break
         print(f"FAILED\n  {err}")
-        retry = prompt("Retry? [y/N]: ").strip().lower()
-        if retry == "y":
-            return step_ha_connection(config, env, config_path, env_path)
-        print("Skipping connection test — continuing with provided values.")
-    else:
-        print(f"Connected ({count} entities found)")
+        if prompt("Retry? [y/N]: ").strip().lower() != "y":
+            print("Skipping connection test — continuing with provided values.")
+            break
+        current_url = url
+        current_token = token
 
-    # Write outputs
     env["HA_TOKEN"] = token
     save_env(env, env_path)
-    config.setdefault("homeassistant", {})["url"] = url
+    config.setdefault("homeassistant", {})
+    config["homeassistant"]["url"] = url
     config["homeassistant"]["token"] = "${HA_TOKEN}"
     save_config(config, config_path)
     print(f"  Wrote {env_path}")
     print(f"  Wrote {config_path}")
-
     return url, token
 
 
