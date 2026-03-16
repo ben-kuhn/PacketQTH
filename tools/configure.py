@@ -83,8 +83,12 @@ def save_env(values: dict[str, str], path: Path) -> None:
         os.write(fd, content.encode())
     finally:
         os.close(fd)
-    # Ensure permissions are correct even if file already existed
-    os.chmod(path, 0o600)
+    # Ensure permissions are correct even if file already existed.
+    # May fail on container bind-mounts (rootless Podman restriction) — not fatal.
+    try:
+        os.chmod(path, 0o600)
+    except PermissionError:
+        pass
 
 
 def load_config(path: Path) -> dict[str, Any]:
@@ -119,8 +123,12 @@ def save_users(users: dict[str, str], path: Path) -> None:
         os.write(fd, content.encode())
     finally:
         os.close(fd)
-    # Ensure permissions are correct even if file already existed
-    os.chmod(path, 0o600)
+    # Ensure permissions are correct even if file already existed.
+    # May fail on container bind-mounts (rootless Podman restriction) — not fatal.
+    try:
+        os.chmod(path, 0o600)
+    except PermissionError:
+        pass
 
 
 def _deep_merge(base: dict, override: dict) -> None:
