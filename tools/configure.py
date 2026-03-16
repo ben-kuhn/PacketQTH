@@ -578,7 +578,7 @@ def main() -> None:
     config_path = Path(args.config)
     env_path = Path(args.env)
     users_path = Path(args.users)
-    compose_path = Path("docker-compose.generated.yml")
+    compose_path = config_path.parent / "docker-compose.generated.yml"
 
     print("=" * 60)
     print("  PacketQTH Setup Wizard")
