@@ -4,6 +4,8 @@ import pytest
 import tempfile
 import yaml
 from pathlib import Path
+import aiohttp
+from unittest.mock import AsyncMock, patch, MagicMock
 
 
 def test_load_env_returns_empty_dict_when_file_missing(tmp_path):
@@ -62,3 +64,57 @@ def test_save_users_writes_yaml_with_users_key(tmp_path):
     save_users({"W1AW": "SECRETBASE32"}, users_file)
     loaded = yaml.safe_load(users_file.read_text())
     assert loaded["users"]["W1AW"] == "SECRETBASE32"
+
+
+@pytest.mark.asyncio
+async def test_test_ha_connection_returns_count_on_success():
+    from tools.configure import test_ha_connection
+    mock_states = [{"entity_id": "light.kitchen"}, {"entity_id": "switch.fan"}]
+    with patch("aiohttp.ClientSession") as MockSession:
+        mock_resp = AsyncMock()
+        mock_resp.status = 200
+        mock_resp.json = AsyncMock(return_value=mock_states)
+        mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
+        mock_resp.__aexit__ = AsyncMock(return_value=False)
+        mock_session = AsyncMock()
+        mock_session.get.return_value = mock_resp
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=False)
+        MockSession.return_value = mock_session
+        count, err = await test_ha_connection("http://ha.local:8123", "mytoken")
+    assert count == 2
+    assert err is None
+
+
+@pytest.mark.asyncio
+async def test_test_ha_connection_returns_error_on_auth_failure():
+    from tools.configure import test_ha_connection
+    with patch("aiohttp.ClientSession") as MockSession:
+        mock_resp = AsyncMock()
+        mock_resp.status = 401
+        mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
+        mock_resp.__aexit__ = AsyncMock(return_value=False)
+        mock_session = AsyncMock()
+        mock_session.get.return_value = mock_resp
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=False)
+        MockSession.return_value = mock_session
+        count, err = await test_ha_connection("http://ha.local:8123", "badtoken")
+    assert count is None
+    assert "401" in err or "Unauthorized" in err.lower()
+
+
+@pytest.mark.asyncio
+async def test_test_ha_connection_returns_error_on_network_failure():
+    from tools.configure import test_ha_connection
+    with patch("aiohttp.ClientSession") as MockSession:
+        mock_session = AsyncMock()
+        mock_session.get.side_effect = aiohttp.ClientConnectorError(
+            MagicMock(), OSError("connection refused")
+        )
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=False)
+        MockSession.return_value = mock_session
+        count, err = await test_ha_connection("http://ha.local:8123", "token")
+    assert count is None
+    assert err is not None

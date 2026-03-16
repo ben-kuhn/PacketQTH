@@ -112,5 +112,80 @@ def _deep_merge(base: dict, override: dict) -> None:
             base[key] = value
 
 
+# ---------------------------------------------------------------------------
+# Step 1: HomeAssistant Connection
+# ---------------------------------------------------------------------------
+
+async def test_ha_connection(url: str, token: str) -> tuple[int | None, str | None]:
+    """
+    Test HA connection by fetching /api/states.
+    Returns (entity_count, None) on success or (None, error_message) on failure.
+    """
+    import aiohttp
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    try:
+        async with aiohttp.ClientSession() as session:
+            resp = await session.get(f"{url.rstrip('/')}/api/states", headers=headers)
+            if resp.status == 401:
+                return None, "Unauthorized (401) — check your token"
+            if resp.status != 200:
+                return None, f"Unexpected status {resp.status}"
+            states = await resp.json()
+            return len(states), None
+    except aiohttp.ClientConnectorError as e:
+        return None, f"Connection failed: {e}"
+    except Exception as e:
+        return None, f"Error: {e}"
+
+
+def step_ha_connection(config: dict, env: dict, config_path: Path, env_path: Path) -> tuple[str, str]:
+    """
+    Prompt for HA URL and token. Test connection. Write .env and config.yaml.
+    Returns (url, token) for use in later steps.
+    """
+    from prompt_toolkit import prompt
+    from prompt_toolkit.formatted_text import HTML
+
+    print("\n" + "=" * 60)
+    print("Step 1/5: HomeAssistant Connection")
+    print("=" * 60)
+
+    current_url = config.get("homeassistant", {}).get("url", DEFAULT_CONFIG["homeassistant"]["url"])
+    current_token = env.get("HA_TOKEN", "")
+
+    url = prompt(
+        HTML(f"HomeAssistant URL [<ansigreen>{current_url}</ansigreen>]: "),
+    ).strip() or current_url
+
+    token_hint = f"***{current_token[-6:]}" if len(current_token) > 6 else ("(set)" if current_token else "(not set)")
+    token = prompt(
+        HTML(f"HA Long-Lived Access Token [<ansigreen>{token_hint}</ansigreen>]: "),
+        is_password=True,
+    ).strip() or current_token
+
+    # Test connection
+    print("\nTesting connection...", end=" ", flush=True)
+    count, err = asyncio.run(test_ha_connection(url, token))
+    if err:
+        print(f"FAILED\n  {err}")
+        retry = prompt("Retry? [y/N]: ").strip().lower()
+        if retry == "y":
+            return step_ha_connection(config, env, config_path, env_path)
+        print("Skipping connection test — continuing with provided values.")
+    else:
+        print(f"Connected ({count} entities found)")
+
+    # Write outputs
+    env["HA_TOKEN"] = token
+    save_env(env, env_path)
+    config.setdefault("homeassistant", {})["url"] = url
+    config["homeassistant"]["token"] = "${HA_TOKEN}"
+    save_config(config, config_path)
+    print(f"  Wrote {env_path}")
+    print(f"  Wrote {config_path}")
+
+    return url, token
+
+
 if __name__ == "__main__":
     print("PacketQTH Setup Wizard — run with: python tools/configure.py")
