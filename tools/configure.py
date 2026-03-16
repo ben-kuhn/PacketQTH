@@ -495,7 +495,6 @@ def step_user_setup(users_path: Path) -> None:
 def generate_compose(host_port: int, config_dir: str) -> str:
     """Generate docker-compose YAML string from parameters."""
     compose = {
-        "version": "3.8",
         "services": {
             "packetqth": {
                 "image": "ghcr.io/ben-kuhn/packetqth:latest",

@@ -1,7 +1,6 @@
 # tests/tools/test_configure.py
 import os
 import pytest
-import tempfile
 import yaml
 from pathlib import Path
 import aiohttp
@@ -221,3 +220,13 @@ def test_generate_compose_default_port():
     result = generate_compose(host_port=8023, config_dir="/opt/pqth")
     loaded = yaml.safe_load(result)
     assert "8023:8023" in loaded["services"]["packetqth"]["ports"][0]
+
+
+def test_load_config_preserves_null_values_from_file(tmp_path):
+    from tools.configure import load_config
+    cfg_file = tmp_path / "config.yaml"
+    # Write a config with explicit null for exclude_domains
+    cfg_file.write_text("homeassistant:\n  entity_filter:\n    exclude_domains: null\n")
+    result = load_config(cfg_file)
+    # null from file should override DEFAULT_CONFIG's value
+    assert result["homeassistant"]["entity_filter"]["exclude_domains"] is None
