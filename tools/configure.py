@@ -538,5 +538,51 @@ def step_docker_compose(output_path: Path) -> None:
     print("    docker compose up -d")
 
 
+# ---------------------------------------------------------------------------
+# Main Wizard
+# ---------------------------------------------------------------------------
+
+def main() -> None:
+    import argparse
+    parser = argparse.ArgumentParser(description="PacketQTH Setup Wizard")
+    parser.add_argument("--config", default="config.yaml", help="Path to config.yaml")
+    parser.add_argument("--env", default=".env", help="Path to .env file")
+    parser.add_argument("--users", default="users.yaml", help="Path to users.yaml")
+    args = parser.parse_args()
+
+    config_path = Path(args.config)
+    env_path = Path(args.env)
+    users_path = Path(args.users)
+    compose_path = Path("docker-compose.generated.yml")
+
+    print("=" * 60)
+    print("  PacketQTH Setup Wizard")
+    print("=" * 60)
+    if config_path.exists():
+        print(f"  Existing config found at {config_path} — pre-filling values.")
+    else:
+        print("  No existing config found — starting fresh.")
+
+    # Load existing state
+    config = load_config(config_path)
+    env = load_env(env_path)
+
+    # Run steps
+    ha_url, ha_token = step_ha_connection(config, env, config_path, env_path)
+    step_server_config(config, config_path)
+    step_entity_filter(config, config_path, ha_url, ha_token)
+    step_user_setup(users_path)
+    step_docker_compose(compose_path)
+
+    print("\n" + "=" * 60)
+    print("  Setup complete!")
+    print(f"  Config:  {config_path}")
+    print(f"  Env:     {env_path}")
+    print(f"  Users:   {users_path}")
+    print(f"  Compose: {compose_path}")
+    print("=" * 60)
+    print("\n73!")
+
+
 if __name__ == "__main__":
-    print("PacketQTH Setup Wizard — run with: python tools/configure.py")
+    main()
