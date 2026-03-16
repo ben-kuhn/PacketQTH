@@ -140,3 +140,42 @@ def test_parse_server_inputs_rejects_invalid_port():
     from tools.configure import parse_server_inputs
     with pytest.raises(ValueError, match="port"):
         parse_server_inputs(port="notanumber", timeout="300", max_attempts="3")
+
+
+def test_build_entity_filter_excludes_unselected_within_domain():
+    from tools.configure import build_entity_filter
+    all_entities = [
+        {"entity_id": "light.kitchen"},
+        {"entity_id": "light.living_room"},
+        {"entity_id": "switch.fan"},
+    ]
+    selected_domains = ["light"]
+    selected_entities = {"light": ["light.kitchen"]}  # living_room NOT selected
+    inc_domains, exc_entities = build_entity_filter(all_entities, selected_domains, selected_entities)
+    assert inc_domains == ["light"]
+    assert "light.living_room" in exc_entities
+    assert "light.kitchen" not in exc_entities
+    assert "switch.fan" not in exc_entities  # not in selected domain
+
+
+def test_build_entity_filter_no_exclusions_when_all_selected():
+    from tools.configure import build_entity_filter
+    all_entities = [{"entity_id": "light.kitchen"}, {"entity_id": "light.hall"}]
+    selected_domains = ["light"]
+    selected_entities = {"light": ["light.kitchen", "light.hall"]}
+    inc_domains, exc_entities = build_entity_filter(all_entities, selected_domains, selected_entities)
+    assert inc_domains == ["light"]
+    assert exc_entities == []
+
+
+def test_group_entities_by_domain_groups_and_sorts():
+    from tools.configure import group_entities_by_domain
+    entities = [
+        {"entity_id": "switch.fan"},
+        {"entity_id": "light.kitchen"},
+        {"entity_id": "light.hall"},
+    ]
+    grouped = group_entities_by_domain(entities)
+    assert "light" in grouped
+    assert "switch" in grouped
+    assert grouped["light"] == sorted(grouped["light"])

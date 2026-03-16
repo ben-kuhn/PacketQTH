@@ -245,5 +245,141 @@ def step_server_config(config: dict, config_path: Path) -> None:
     print(f"  Wrote {config_path}")
 
 
+# ---------------------------------------------------------------------------
+# Step 3: Entity Filter
+# ---------------------------------------------------------------------------
+
+async def fetch_all_entities(url: str, token: str) -> list[dict]:
+    """Fetch all entity states from HA API."""
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    timeout = aiohttp.ClientTimeout(total=10)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        resp = await session.get(f"{url.rstrip('/')}/api/states", headers=headers)
+        resp.raise_for_status()
+        return await resp.json()
+
+
+def group_entities_by_domain(entities: list[dict]) -> dict[str, list[str]]:
+    """Group entity_ids by domain, sorted within each domain."""
+    grouped: dict[str, list[str]] = {}
+    for entity in entities:
+        eid = entity.get("entity_id", "")
+        if "." not in eid:
+            continue
+        domain = eid.split(".")[0]
+        grouped.setdefault(domain, []).append(eid)
+    for domain in grouped:
+        grouped[domain].sort()
+    return grouped
+
+
+def build_entity_filter(
+    all_entities: list[dict],
+    selected_domains: list[str],
+    selected_entities: dict[str, list[str]],
+) -> tuple[list[str], list[str]]:
+    """
+    Build include_domains and exclude_entities lists from selections.
+    Entities within selected domains that were NOT chosen become exclude_entities.
+    """
+    grouped = group_entities_by_domain(all_entities)
+    exclude_entities = []
+    for domain in selected_domains:
+        domain_entities = grouped.get(domain, [])
+        chosen = set(selected_entities.get(domain, []))
+        for eid in domain_entities:
+            if eid not in chosen:
+                exclude_entities.append(eid)
+    return sorted(selected_domains), sorted(exclude_entities)
+
+
+def step_entity_filter(config: dict, config_path: Path, ha_url: str, ha_token: str) -> None:
+    """
+    Interactively build entity filter. Skippable if HA unreachable.
+    Writes entity_filter section to config.yaml.
+    """
+    from prompt_toolkit import prompt
+    from prompt_toolkit.shortcuts import checkboxlist_dialog
+    from prompt_toolkit.styles import Style
+
+    print("\n" + "=" * 60)
+    print("Step 3/5: Entity Filter")
+    print("  (Enter 'n' to skip if HomeAssistant is unavailable)")
+    print("=" * 60)
+
+    skip = prompt("Fetch entities from HomeAssistant now? [Y/n]: ").strip().lower()
+    if skip == "n":
+        print("  Skipped — keeping existing entity_filter config.")
+        return
+
+    # Fetch entities
+    print("Fetching entities...", end=" ", flush=True)
+    try:
+        entities = asyncio.run(fetch_all_entities(ha_url, ha_token))
+        print(f"{len(entities)} entities found")
+    except Exception as e:
+        print(f"FAILED: {e}")
+        print("  Skipping entity filter step.")
+        return
+
+    grouped = group_entities_by_domain(entities)
+    all_domains = sorted(grouped.keys())
+
+    # Current selections from config
+    ef = config.get("homeassistant", {}).get("entity_filter", {})
+    current_inc_domains = set(ef.get("include_domains") or [])
+    current_exc_entities = set(ef.get("exclude_entities") or [])
+
+    # Domain selection dialog
+    style = Style.from_dict({"dialog": "bg:#1e1e2e", "dialog.body": "bg:#1e1e2e fg:#cdd6f4"})
+    domain_choices = [(d, f"{d}  ({len(grouped[d])} entities)") for d in all_domains]
+    default_domains = [d for d in all_domains if d in current_inc_domains] or \
+                      [d for d in all_domains if d in {"light", "switch", "automation", "cover", "sensor", "climate", "fan", "lock"}]
+
+    selected_domains = checkboxlist_dialog(
+        title="Select domains to include",
+        text="Space to toggle, Enter to confirm:",
+        values=domain_choices,
+        default_values=default_domains,
+        style=style,
+    ).run()
+
+    if selected_domains is None:
+        print("  Cancelled — keeping existing entity_filter config.")
+        return
+
+    # Per-domain entity selection
+    selected_entities: dict[str, list[str]] = {}
+    for domain in selected_domains:
+        domain_eids = grouped[domain]
+        entity_choices = [(eid, eid) for eid in domain_eids]
+        default_eids = [eid for eid in domain_eids if eid not in current_exc_entities]
+
+        chosen = checkboxlist_dialog(
+            title=f"Select entities to include — {domain} ({len(domain_eids)} total)",
+            text="Space to toggle, Enter to confirm:",
+            values=entity_choices,
+            default_values=default_eids,
+            style=style,
+        ).run()
+
+        if chosen is None:
+            print(f"  Cancelled on domain '{domain}' — keeping existing config.")
+            return
+        selected_entities[domain] = chosen
+
+    inc_domains, exc_entities = build_entity_filter(entities, selected_domains, selected_entities)
+
+    config.setdefault("homeassistant", {}).setdefault("entity_filter", {}).update({
+        "include_domains": inc_domains,
+        "exclude_domains": None,
+        "include_entities": None,
+        "exclude_entities": exc_entities,
+    })
+    save_config(config, config_path)
+    print(f"  {len(inc_domains)} domains, {len(exc_entities)} excluded entities")
+    print(f"  Wrote {config_path}")
+
+
 if __name__ == "__main__":
     print("PacketQTH Setup Wizard — run with: python tools/configure.py")
