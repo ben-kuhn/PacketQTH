@@ -399,7 +399,7 @@ def parse_totp_secret_from_output(callsign: str, output: str) -> str | None:
     import re
     pattern = rf'^\s+{re.escape(callsign.upper())}:\s+"([A-Z2-7]+)"'
     for line in output.splitlines():
-        m = re.match(pattern, line, re.IGNORECASE)
+        m = re.match(pattern, line)
         if m:
             return m.group(1)
     return None
@@ -444,6 +444,8 @@ def step_user_setup(users_path: Path) -> None:
             print(line, end="", flush=True)
             collected_lines.append(line)
         proc.wait()
+        if proc.returncode != 0:
+            print(f"\n  Warning: setup_totp.py exited with code {proc.returncode}")
     except FileNotFoundError:
         print(f"  Error: could not find {script}")
         return
