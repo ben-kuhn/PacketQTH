@@ -54,7 +54,7 @@ Q         Quit
 - 🏠 **Full HA Control** - Lights, switches, sensors, blinds, and automations
 - 🐳 **Containerized** - Docker deployment with security hardening
 - 🔒 **Brute Force Protection** - 5 attempts trigger 5-minute lockout
-- 📱 **Standard TOTP** - Works with Google Authenticator, Password Managers, etc.
+- 📱 **Standard TOTP** - Works with Google Authenticator, Authy, password managers, etc.
 
 ## Why PacketQTH?
 
@@ -70,162 +70,94 @@ Packet radio provides reliable communication when internet and cellular networks
 ### Prerequisites
 
 - HomeAssistant instance with API access
-- BPQ packet node/BBS
-- Python 3.11+
-- Docker (recommended) or systemd
+- Docker or Podman
+- A linBPQ node (for packet radio use; telnet works directly for testing)
 
-### Dependencies
+### 1. Clone the repository
 
-PacketQTH has minimal dependencies for fast installation:
-
-**Core (required):**
-- `pyotp` - TOTP authentication
-- `PyYAML` - Configuration files
-- `aiohttp` - HomeAssistant API client
-
-**Tools (optional):**
-- `qrcode[pil]` - QR code generation for TOTP setup
-
-### Installation
-
-1. **Clone the repository:**
 ```bash
 git clone https://github.com/ben-kuhn/packetqth.git
 cd packetqth
 ```
 
-2. **Set up users:**
+### 2. Run the setup wizard
 
-**Option A: Interactive Setup Wizard** ⭐ Recommended
+The wizard generates `config.yaml`, `.env`, `users.yaml`, and `docker-compose.generated.yml` in one interactive session. It connects to your HomeAssistant to test the connection and lets you select which entities to expose.
+
 ```bash
-# Generates config.yaml, .env, users.yaml, and docker-compose.generated.yml
 # Podman (rootless):
-podman run --rm -it --userns=keep-id -v $(pwd):/config \
+podman run --rm -it \
+  --userns=keep-id \
+  -v $(pwd):/config \
   ghcr.io/ben-kuhn/packetqth-tools:latest \
   python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
 
 # Docker:
-docker run --rm -it --user $(id -u):$(id -g) -v $(pwd):/config \
+docker run --rm -it \
+  --user $(id -u):$(id -g) \
+  -v $(pwd):/config \
   ghcr.io/ben-kuhn/packetqth-tools:latest \
   python tools/configure.py --config /config/config.yaml --env /config/.env --users /config/users.yaml
 ```
 
-**Option B: TOTP Only (Pre-Built Tools Image)**
+During setup you will be shown a QR code — scan it with your authenticator app (Google Authenticator, Authy, etc.) before closing the wizard.
+
+> **Prefer to configure manually?** See [docs/MANUAL_SETUP.md](docs/MANUAL_SETUP.md).
+
+### 3. Start the server
+
 ```bash
-# Generate TOTP with terminal QR code (no installation needed!)
-docker run --rm -it ghcr.io/ben-kuhn/packetqth-tools:latest \
-  python tools/setup_totp.py KN4XYZ
+# Use the generated compose file, or rename it:
+cp docker-compose.generated.yml docker-compose.yml
 
-# Scan the ASCII QR code displayed in terminal with your authenticator app
+docker compose up -d
+docker compose logs -f
 ```
 
-**Option C: Build Tools Image Locally**
-```bash
-./tools/docker-setup.sh KN4XYZ
-```
+### 4. Configure LinBPQ
 
-**Option D: Simple Python (No Packages)**
-```bash
-# Generate secret using only Python stdlib
-python3 tools/generate_secret.py KN4XYZ
+Add an application entry to your `bpq32.cfg`:
 
-# Manually enter the displayed secret into your authenticator app
-```
-
-**Add User to Configuration (if not using wizard):**
-```bash
-cp users.yaml.example users.yaml
-nano users.yaml  # Add TOTP secret from Option B/C/D
-```
-
-**Note:** See [DOCKER.md](DOCKER.md) for detailed Docker setup instructions.
-
-3. **Configure the application:**
-```bash
-# Copy example config
-cp config.yaml.example config.yaml
-
-# Edit config with your settings
-nano config.yaml
-
-# Set your HomeAssistant token (recommended via environment variable)
-export HA_TOKEN=your_long_lived_access_token_here
-```
-
-Or add the token directly to config.yaml:
-```yaml
-homeassistant:
-  url: http://homeassistant.local:8123
-  token: your_long_lived_access_token_here
-```
-
-4. **Run with Docker (recommended):**
-
-**Important:** Complete steps 2 and 3 (TOTP setup and configuration) BEFORE running Docker!
-
-**Pre-built images available:**
-```bash
-# Pull the latest image from GitHub Container Registry
-docker pull ghcr.io/ben-kuhn/packetqth:latest
-
-# Or use a specific version
-docker pull ghcr.io/ben-kuhn/packetqth:1.0.0
-```
-
-**Run with docker-compose:**
-```bash
-# After setting up users and config on host
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop
-docker-compose down
-```
-
-**Docker + TOTP Setup Workflow:**
-1. Run `setup_totp.py` on your **host machine** (not in container)
-2. Scan QR code with your authenticator app
-3. Add TOTP secret to `users.yaml` on your host
-4. Create `config.yaml` on your host with HA token
-5. Run `docker-compose up -d` (mounts config files from host)
-
-**Or run directly without Docker:**
-```bash
-pip3 install -r requirements.txt
-python3 main.py
-
-# Or use the start script
-./start.sh
-```
-
-5. **Configure LinBPQ:**
-
-Add an application entry to your LinBPQ `bpq32.cfg`:
 ```
 APPLICATION 10,PACKETQTH,C 10 HOST localhost 8023
 ```
 
-This creates a telnet application that connects to PacketQTH on localhost:8023.
+Users connect with `C PACKETQTH` or `TELNET PACKETQTH`.
 
-Users can then connect with: `C PACKETQTH` or `TELNET PACKETQTH`
+### 5. Test
 
-6. **Connect and test:**
-
-Via LinBPQ:
-```
-BPQ -> TELNET -> Connect to PacketQTH
-```
-
-Or directly via telnet for testing:
 ```bash
 telnet localhost 8023
 ```
 
-## Architecture
+## Usage
 
-PacketQTH uses a layered architecture optimized for low-bandwidth radio:
+### Commands
+
+```
+L [pg]         List devices (paginated)
+S <id>         Show device status
+ON <id>        Turn device on
+OFF <id>       Turn device off
+SET <id> <val> Set device value (brightness, position, etc.)
+A [pg]         List automations
+T <id>         Trigger automation
+H              Help
+Q              Quit
+```
+
+Write operations (ON/OFF/SET/T) require a fresh TOTP code. Read operations (L/S/A/H) execute immediately.
+
+### Device Abbreviations
+
+| Code | Type |
+|------|------|
+| `LT` | Light |
+| `SW` | Switch |
+| `SN` | Sensor |
+| `BL` | Blind/Cover |
+
+## Architecture
 
 ```
 linBPQ Node → Telnet Server → Session Manager → TOTP Auth
@@ -239,133 +171,23 @@ linBPQ Node → Telnet Server → Session Manager → TOTP Auth
                               Text Formatter
 ```
 
-Key components:
-- **Telnet Server** - Handles incoming connections
-- **TOTP Authentication** - Secure auth without passwords
-- **Session Manager** - Tracks authenticated users
-- **Command Parser** - Minimal text command processing
-- **Entity Cache** - Reduces HomeAssistant API calls
-- **Text Formatter** - Ultra-compact output
-
-See [ARCHITECTURE.md](ha_packet_architecture.md) for detailed design documentation.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed design documentation.
 
 ## Security
 
 PacketQTH is designed for security over cleartext radio:
 
 - ✅ **No password transmission** - Uses TOTP one-time codes
-- ✅ **TOTP-per-write** - Fresh code required for every state change (ON/OFF/SET/TRIGGER)
-- ✅ **Natural rate limiting** - Write operations limited to 30-second intervals (TOTP window)
-- ✅ **Authentication rate limiting** - 5 failed attempts trigger 5-minute lockout
-- ✅ **Session timeout** - 5-minute inactivity timeout
-- ✅ **Container isolation** - Run in Docker with dropped privileges
-- ✅ **Read-only filesystem** - Limits attack surface
-- ✅ **Audit logging** - Track authentication and write attempts
+- ✅ **TOTP-per-write** - Fresh code required for every state change
+- ✅ **Natural rate limiting** - 30-second intervals enforced by TOTP window
+- ✅ **Authentication rate limiting** - Failed attempts trigger lockout
+- ✅ **Session timeout** - Configurable inactivity timeout
+- ✅ **Container isolation** - Dropped capabilities, read-only filesystem
+- ✅ **Audit logging** - Authentication and write attempts logged
 
 ### Legal Note
 
-Packet radio in amateur bands (USA) prohibits:
-- ❌ Encryption of message content
-- ❌ Obscuring message meaning
-- ✅ Authentication is permitted (TOTP codes are not encryption)
-
-TOTP provides authentication without encrypting the communication, making it legal for amateur radio use while preventing unauthorized access.
-
-## Usage
-
-### Basic Commands
-
-```
-L              List devices (paginated)
-S <id>         Show device status
-ON <id>        Turn device on
-OFF <id>       Turn device off
-SET <id> <val> Set device value (e.g., brightness, position)
-A              List automations
-T <id>         Trigger automation
-H              Help menu
-Q              Quit
-```
-
-### Device Abbreviations
-
-- `LT` - Light
-- `SW` - Switch  
-- `SN` - Sensor
-- `BL` - Blind/Cover
-
-### Example Session
-
-```
-> L
-DEVICES (pg 1/1)
-1.LT Kitchen      [ON]
-2.SW Garage       [OFF]
-
-> ON 2
-
-TOTP Code: 123456
-OK: Garage Switch ON
-
-> A
-AUTOMATIONS (pg 1/1)
-1. Good Night
-2. Morning Routine
-
-> T 1
-
-TOTP Code: 789012
-OK: Good Night triggered
-
-> Q
-73!
-```
-
-**Note:** Write operations (ON, OFF, SET, TRIGGER) require a fresh TOTP code for security. Read operations (L, S, A, H) execute immediately without additional authentication.
-
-## Configuration
-
-### users.yaml
-
-```yaml
-users:
-  - callsign: KN4XYZ
-    totp_secret: JBSWY3DPEHPK3PXP
-    enabled: true
-
-security:
-  max_failed_attempts: 5
-  lockout_duration_seconds: 300
-  session_timeout_seconds: 300
-```
-
-### config.yaml
-
-```yaml
-telnet:
-  host: 0.0.0.0
-  port: 8023
-  max_connections: 10
-  timeout_seconds: 300
-
-homeassistant:
-  url: http://homeassistant.local:8123
-  token: eyJ0eXAiOiJKV1QiLCJhbGc...
-  
-display:
-  page_size: 10
-  use_colors: false
-  
-filters:
-  included_domains:
-    - light
-    - switch
-    - automation
-    - cover
-    - sensor
-  excluded_entities:
-    - sensor.uptime
-```
+Packet radio in amateur bands (USA) prohibits encryption of message content. TOTP provides authentication without encrypting the communication, making it legal for amateur radio use.
 
 ## Development
 
@@ -373,33 +195,25 @@ filters:
 
 ```
 packetqth/
-├── auth/              # TOTP authentication module
+├── auth/              # TOTP authentication
 ├── server/            # Telnet server and session management
 ├── commands/          # Command parsing and handlers
 ├── homeassistant/     # HomeAssistant API client
 ├── formatting/        # Text output formatting
-├── utils/             # Configuration and utilities
-└── tools/             # Setup and testing scripts
+├── tools/             # Setup scripts and utilities
+└── docs/              # Documentation
 ```
 
 ### Running Tests
 
 ```bash
-# Test TOTP authentication
-python tools/test_totp.py
-
-# Interactive auth test
-python tools/test_totp.py --interactive
-
-# Generate user secrets
-python tools/setup_totp.py <CALLSIGN>
+.venv/bin/pytest
 ```
 
-### Building Container
+### Building the Container
 
 ```bash
 docker build -t packetqth:latest .
-docker-compose up -d
 ```
 
 ## Contributing
@@ -409,7 +223,6 @@ Contributions welcome! Areas of interest:
 - Additional entity types (climate, media players, etc.)
 - Command macros/scripting
 - Status monitoring/polling for live updates
-- Performance optimizations
 - Documentation improvements
 - Testing and bug fixes
 
@@ -417,29 +230,24 @@ Please open an issue first to discuss major changes.
 
 ## Roadmap
 
-**Core Features (Completed):**
-- [x] Complete telnet server implementation
-- [x] Command parser and handlers
-- [x] HomeAssistant API client
-- [x] Entity caching layer
-- [x] Text formatter with pagination
-- [x] TOTP authentication with rate limiting
+**Completed:**
+- [x] Telnet server, command parser, HomeAssistant API client
+- [x] TOTP authentication with rate limiting and per-write codes
+- [x] Entity caching and text formatter with pagination
 - [x] LinBPQ compatibility (BPQ mode)
-- [x] Multi-platform Docker images
-- [x] Security audits and hardening
+- [x] Multi-platform Docker images (amd64, arm64, armv7)
+- [x] Interactive setup wizard
+- [x] Security hardening
 
-**Future Enhancements:**
+**Planned:**
 - [ ] Status monitoring/polling for live state updates
 - [ ] Command macros for custom shortcuts
 - [ ] Scene and script support
-- [ ] Enhanced entity filtering
-- [ ] Multi-language support
+- [ ] Climate and media player support
 
 ## License
 
-GNU General Public License v3.0 or later - See LICENSE file for details
-
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+GNU General Public License v3.0 or later — see [LICENSE](LICENSE).
 
 ## Support
 
@@ -454,12 +262,6 @@ Built for the amateur radio and home automation communities. Special thanks to:
 - The HomeAssistant team for their excellent API
 - John G8BPQ for linBPQ
 - The packet radio community keeping the mode alive
-
-## Ham Radio Resources
-
-- [ARRL Packet Radio](https://www.arrl.org/packet-radio)
-- [linBPQ Documentation](https://www.cantab.net/users/john.wiseman/Documents/)
-- [Amateur Radio Emergency Communications](https://www.arrl.org/ares)
 
 ---
 
