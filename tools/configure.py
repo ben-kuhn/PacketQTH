@@ -569,9 +569,15 @@ def step_docker_compose(output_path: Path) -> None:
     config_dir_input = prompt(HTML(f"Host config directory [<ansigreen>{default_dir}</ansigreen>]: ")).strip() or default_dir
     config_dir = str(Path(config_dir_input).resolve())
 
-    # Create logs directory next to config files so the container can write to it
+    # Create logs directory next to config files so the container can write to it.
+    # This may fail when running inside a container and config_dir is a host path
+    # that doesn't exist in the container's filesystem — that's fine.
     logs_dir = Path(config_dir) / "logs"
-    logs_dir.mkdir(exist_ok=True)
+    try:
+        logs_dir.mkdir(exist_ok=True)
+    except (FileNotFoundError, PermissionError):
+        print(f"  Note: could not create {logs_dir} — create it on the host if needed:")
+        print(f"    mkdir -p {logs_dir}")
 
     compose_yaml = generate_compose(
         host_port=host_port,
