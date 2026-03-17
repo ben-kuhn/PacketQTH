@@ -549,7 +549,10 @@ def step_docker_compose(output_path: Path) -> None:
     print("=" * 60)
 
     default_port = 8023
-    default_dir = str(Path.cwd())
+    # Default to the directory containing the output file (same as config files).
+    # When running in a container this is the container-side mount path (e.g. /config);
+    # the user should replace it with the equivalent host path.
+    default_dir = str(output_path.parent)
 
     while True:
         port_str = prompt(HTML(f"Host port to expose telnet on [<ansigreen>{default_port}</ansigreen>]: ")).strip()
@@ -561,7 +564,9 @@ def step_docker_compose(output_path: Path) -> None:
             break
         print(f"  Invalid port {port_str!r} — must be 1–65535")
 
-    config_dir_input = prompt(HTML(f"Config directory path [<ansigreen>{default_dir}</ansigreen>]: ")).strip() or default_dir
+    print("  Enter the absolute path on the HOST machine where your config files")
+    print("  will live (the directory you mounted with -v ...:/config).")
+    config_dir_input = prompt(HTML(f"Host config directory [<ansigreen>{default_dir}</ansigreen>]: ")).strip() or default_dir
     config_dir = str(Path(config_dir_input).resolve())
 
     # Create logs directory next to config files so the container can write to it
