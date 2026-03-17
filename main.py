@@ -30,13 +30,20 @@ from server.telnet import TelnetServer
 
 
 # Configure logging
+_log_level = getattr(logging, os.environ.get('LOG_LEVEL', 'INFO').upper(), logging.INFO)
+_log_file = os.environ.get('LOG_FILE', '/app/logs/packetqth.log')
+_handlers: list = [logging.StreamHandler()]
+try:
+    Path(_log_file).parent.mkdir(parents=True, exist_ok=True)
+    _handlers.append(logging.FileHandler(_log_file))
+except OSError as e:
+    # Fall back to stdout-only if the log file can't be opened
+    print(f"WARNING: cannot open log file {_log_file!r}: {e} — logging to stdout only", file=sys.stderr)
+
 logging.basicConfig(
-    level=logging.INFO,
+    level=_log_level,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('/app/logs/packetqth.log')
-    ]
+    handlers=_handlers,
 )
 
 logger = logging.getLogger(__name__)

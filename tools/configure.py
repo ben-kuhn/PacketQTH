@@ -518,6 +518,7 @@ def generate_compose(host_port: int, config_dir: str, logs_dir: str, uid: int, g
                 "environment": [
                     "HA_TOKEN=${HA_TOKEN}",
                     "LOG_LEVEL=${LOG_LEVEL:-INFO}",
+                    "LOG_FILE=${LOG_FILE:-/app/logs/packetqth.log}",
                 ],
                 "networks": ["homeassistant"],
                 "security_opt": ["no-new-privileges:true"],
