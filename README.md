@@ -238,12 +238,12 @@ Please open an issue first to discuss major changes.
 - [x] Multi-platform Docker images (amd64, arm64, armv7)
 - [x] Interactive setup wizard
 - [x] Security hardening
+- [x] Script support
 
 **Planned:**
-- [ ] Status monitoring/polling for live state updates
 - [ ] Command macros for custom shortcuts
-- [ ] Scene and script support
-- [ ] Climate and media player support
+- [ ] Scene support
+- [ ] Climate support
 
 ## License
 
