@@ -500,7 +500,7 @@ def step_user_setup(users_path: Path) -> None:
 # Step 5: Docker Compose
 # ---------------------------------------------------------------------------
 
-def generate_compose(host_port: int, config_dir: str, uid: int, gid: int) -> str:
+def generate_compose(host_port: int, config_dir: str, logs_dir: str, uid: int, gid: int) -> str:
     """Generate docker-compose YAML string from parameters."""
     compose = {
         "services": {
@@ -513,7 +513,7 @@ def generate_compose(host_port: int, config_dir: str, uid: int, gid: int) -> str
                 "volumes": [
                     f"{config_dir}/config.yaml:/app/config.yaml:ro",
                     f"{config_dir}/users.yaml:/app/users.yaml:ro",
-                    f"{config_dir}/logs:/app/logs",
+                    f"{logs_dir}:/app/logs",
                 ],
                 "environment": [
                     "HA_TOKEN=${HA_TOKEN}",
@@ -569,12 +569,14 @@ def step_docker_compose(output_path: Path) -> None:
     config_dir_input = prompt(HTML(f"Host config directory [<ansigreen>{default_dir}</ansigreen>]: ")).strip() or default_dir
     config_dir = str(Path(config_dir_input).resolve())
 
-    # Create logs directory next to config files so the container can write to it.
-    # This may fail when running inside a container and config_dir is a host path
-    # that doesn't exist in the container's filesystem — that's fine.
-    logs_dir = Path(config_dir) / "logs"
+    default_logs = str(Path(config_dir) / "logs")
+    logs_dir_input = prompt(HTML(f"Host logs directory [<ansigreen>{default_logs}</ansigreen>]: ")).strip() or default_logs
+    logs_dir = str(Path(logs_dir_input).resolve())
+
+    # Create the logs directory. May fail when running inside a container and
+    # logs_dir is a host path that doesn't exist in the container filesystem.
     try:
-        logs_dir.mkdir(exist_ok=True)
+        Path(logs_dir).mkdir(parents=True, exist_ok=True)
     except (FileNotFoundError, PermissionError):
         print(f"  Note: could not create {logs_dir} — create it on the host if needed:")
         print(f"    mkdir -p {logs_dir}")
@@ -582,6 +584,7 @@ def step_docker_compose(output_path: Path) -> None:
     compose_yaml = generate_compose(
         host_port=host_port,
         config_dir=config_dir,
+        logs_dir=logs_dir,
         uid=os.getuid(),
         gid=os.getgid(),
     )
