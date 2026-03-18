@@ -40,8 +40,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "entity_filter": {
             "include_domains": ["light", "switch", "automation", "cover", "sensor", "climate", "fan", "lock"],
             "exclude_domains": None,
-            "include_entities": None,
-            "exclude_entities": [],
+            "include_entities": [],
+            "exclude_entities": None,
         },
     },
     "auth": {"users_file": "users.yaml"},
@@ -314,18 +314,14 @@ def build_entity_filter(
     selected_entities: dict[str, list[str]],
 ) -> tuple[list[str], list[str]]:
     """
-    Build include_domains and exclude_entities lists from selections.
-    Entities within selected domains that were NOT chosen become exclude_entities.
+    Build include_domains and include_entities lists from selections.
+    Only entities explicitly chosen are included in include_entities.
     """
-    grouped = group_entities_by_domain(all_entities)
-    exclude_entities = []
+    include_entities = []
     for domain in selected_domains:
-        domain_entities = grouped.get(domain, [])
-        chosen = set(selected_entities.get(domain, []))
-        for eid in domain_entities:
-            if eid not in chosen:
-                exclude_entities.append(eid)
-    return sorted(selected_domains), sorted(exclude_entities)
+        chosen = selected_entities.get(domain, [])
+        include_entities.extend(chosen)
+    return sorted(selected_domains), sorted(include_entities)
 
 
 def step_entity_filter(config: dict, config_path: Path, ha_url: str, ha_token: str) -> None:
@@ -363,7 +359,7 @@ def step_entity_filter(config: dict, config_path: Path, ha_url: str, ha_token: s
     # Current selections from config
     ef = config.get("homeassistant", {}).get("entity_filter", {})
     current_inc_domains = set(ef.get("include_domains") or [])
-    current_exc_entities = set(ef.get("exclude_entities") or [])
+    current_inc_entities = set(ef.get("include_entities") or [])
 
     # Domain selection dialog
     style = Style.from_dict({"dialog": "bg:#1e1e2e", "dialog.body": "bg:#1e1e2e fg:#cdd6f4"})
@@ -388,7 +384,11 @@ def step_entity_filter(config: dict, config_path: Path, ha_url: str, ha_token: s
     for domain in selected_domains:
         domain_eids = grouped[domain]
         entity_choices = [(eid, eid) for eid in domain_eids]
-        default_eids = [eid for eid in domain_eids if eid not in current_exc_entities]
+        # If we have existing include_entities, pre-select those; otherwise select all
+        if current_inc_entities:
+            default_eids = [eid for eid in domain_eids if eid in current_inc_entities]
+        else:
+            default_eids = domain_eids
 
         chosen = checkboxlist_dialog(
             title=f"Select entities to include — {domain} ({len(domain_eids)} total)",
@@ -402,23 +402,23 @@ def step_entity_filter(config: dict, config_path: Path, ha_url: str, ha_token: s
             print(f"  Cancelled on domain '{domain}' — keeping existing config.")
             return
         if not chosen:
-            print(f"  Warning: no entities selected for '{domain}' — all {len(domain_eids)} will be excluded.")
+            print(f"  Warning: no entities selected for '{domain}' — none will be included.")
             confirm = prompt("Continue anyway? [y/N]: ").strip().lower()
             if confirm != "y":
                 print("  Cancelled — keeping existing entity_filter config.")
                 return
         selected_entities[domain] = chosen
 
-    inc_domains, exc_entities = build_entity_filter(entities, selected_domains, selected_entities)
+    inc_domains, inc_entities = build_entity_filter(entities, selected_domains, selected_entities)
 
     config.setdefault("homeassistant", {}).setdefault("entity_filter", {}).update({
         "include_domains": inc_domains,
         "exclude_domains": None,
-        "include_entities": None,
-        "exclude_entities": exc_entities,
+        "include_entities": inc_entities,
+        "exclude_entities": None,
     })
     save_config(config, config_path)
-    print(f"  {len(inc_domains)} domains, {len(exc_entities)} excluded entities")
+    print(f"  {len(inc_domains)} domains, {len(inc_entities)} included entities")
     print(f"  Wrote {config_path}")
 
 

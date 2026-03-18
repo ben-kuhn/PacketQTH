@@ -143,7 +143,7 @@ class PacketQTH:
 
         entity_filter = EntityFilter(
             included_domains=filter_config.get('include_domains'),
-            excluded_entities=filter_config.get('exclude_entities'),
+            included_entities=filter_config.get('include_entities'),
         )
 
         # Filter entities

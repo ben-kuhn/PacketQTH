@@ -149,7 +149,7 @@ def test_parse_server_inputs_rejects_out_of_range_port():
         parse_server_inputs(port="65536", timeout="300", max_attempts="3")
 
 
-def test_build_entity_filter_excludes_unselected_within_domain():
+def test_build_entity_filter_includes_only_selected():
     from tools.configure import build_entity_filter
     all_entities = [
         {"entity_id": "light.kitchen"},
@@ -157,22 +157,22 @@ def test_build_entity_filter_excludes_unselected_within_domain():
         {"entity_id": "switch.fan"},
     ]
     selected_domains = ["light"]
-    selected_entities = {"light": ["light.kitchen"]}  # living_room NOT selected
-    inc_domains, exc_entities = build_entity_filter(all_entities, selected_domains, selected_entities)
+    selected_entities = {"light": ["light.kitchen"]}  # only kitchen selected
+    inc_domains, inc_entities = build_entity_filter(all_entities, selected_domains, selected_entities)
     assert inc_domains == ["light"]
-    assert "light.living_room" in exc_entities
-    assert "light.kitchen" not in exc_entities
-    assert "switch.fan" not in exc_entities  # not in selected domain
+    assert "light.kitchen" in inc_entities
+    assert "light.living_room" not in inc_entities
+    assert "switch.fan" not in inc_entities
 
 
-def test_build_entity_filter_no_exclusions_when_all_selected():
+def test_build_entity_filter_includes_all_selected():
     from tools.configure import build_entity_filter
     all_entities = [{"entity_id": "light.kitchen"}, {"entity_id": "light.hall"}]
     selected_domains = ["light"]
     selected_entities = {"light": ["light.kitchen", "light.hall"]}
-    inc_domains, exc_entities = build_entity_filter(all_entities, selected_domains, selected_entities)
+    inc_domains, inc_entities = build_entity_filter(all_entities, selected_domains, selected_entities)
     assert inc_domains == ["light"]
-    assert exc_entities == []
+    assert sorted(inc_entities) == ["light.hall", "light.kitchen"]
 
 
 def test_group_entities_by_domain_groups_and_sorts():

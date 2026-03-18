@@ -39,19 +39,24 @@ class TestEntityFilter:
         assert ef.should_include_entity(make_entity('switch.garage'))
         assert not ef.should_include_entity(make_entity('sensor.temp'))
 
-    def test_excluded_entities_exact_match(self):
-        ef = EntityFilter(excluded_entities=['sensor.uptime'])
+    def test_included_entities_exact_match(self):
+        ef = EntityFilter(included_entities=['sensor.temperature'])
+        assert ef.should_include_entity(make_entity('sensor.temperature'))
         assert not ef.should_include_entity(make_entity('sensor.uptime'))
-        assert ef.should_include_entity(make_entity('sensor.temperature'))
 
-    def test_excluded_entities_glob_wildcard(self):
-        ef = EntityFilter(excluded_entities=['sensor.*_boot'])
+    def test_included_entities_glob_wildcard(self):
+        ef = EntityFilter(included_entities=['sensor.*_temp'])
+        assert ef.should_include_entity(make_entity('sensor.outdoor_temp'))
         assert not ef.should_include_entity(make_entity('sensor.last_boot'))
-        assert ef.should_include_entity(make_entity('sensor.temperature'))
 
-    def test_excluded_entities_star_glob(self):
-        ef = EntityFilter(excluded_entities=['sensor.*'])
+    def test_included_entities_star_glob(self):
+        ef = EntityFilter(included_entities=['light.*'])
+        assert ef.should_include_entity(make_entity('light.kitchen'))
         assert not ef.should_include_entity(make_entity('sensor.temp'))
+
+    def test_empty_included_entities_allows_all(self):
+        ef = EntityFilter(included_entities=[])
+        assert ef.should_include_entity(make_entity('sensor.temp'))
         assert ef.should_include_entity(make_entity('light.kitchen'))
 
     def test_excluded_attributes_excludes_matching(self):
@@ -67,13 +72,13 @@ class TestEntityFilter:
         # hidden=False should NOT be excluded
         assert ef.should_include_entity(make_entity('light.x', hidden=False))
 
-    def test_domain_and_excluded_combined(self):
+    def test_domain_and_included_combined(self):
         ef = EntityFilter(
             included_domains=['light'],
-            excluded_entities=['light.hidden']
+            included_entities=['light.kitchen']
         )
         assert ef.should_include_entity(make_entity('light.kitchen'))
-        assert not ef.should_include_entity(make_entity('light.hidden'))
+        assert not ef.should_include_entity(make_entity('light.bedroom'))
         assert not ef.should_include_entity(make_entity('switch.garage'))
 
     def test_entity_without_entity_id(self):
@@ -148,19 +153,19 @@ class TestEntityFilter:
         config = {
             'filters': {
                 'included_domains': ['light', 'switch'],
-                'excluded_entities': ['sensor.uptime'],
+                'included_entities': ['light.kitchen', 'switch.fan'],
                 'excluded_attributes': {'hidden': True}
             }
         }
         ef = EntityFilter.from_config(config)
         assert ef.included_domains == {'light', 'switch'}
-        assert 'sensor.uptime' in ef.excluded_entities
+        assert 'light.kitchen' in ef.included_entities
         assert ef.excluded_attributes == {'hidden': True}
 
     def test_from_config_empty(self):
         ef = EntityFilter.from_config({})
         assert ef.included_domains is None
-        assert ef.excluded_entities == []
+        assert ef.included_entities == []
         assert ef.excluded_attributes == {}
 
 

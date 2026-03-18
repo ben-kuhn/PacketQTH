@@ -14,14 +14,14 @@ class EntityFilter:
 
     Features:
     - Include/exclude by domain (light, switch, sensor, etc.)
-    - Exclude specific entities by ID or glob pattern
+    - Include specific entities by ID or glob pattern (allowlist)
     - Exclude by attribute values
     """
 
     def __init__(
         self,
         included_domains: Optional[List[str]] = None,
-        excluded_entities: Optional[List[str]] = None,
+        included_entities: Optional[List[str]] = None,
         excluded_attributes: Optional[Dict[str, Any]] = None
     ):
         """
@@ -30,13 +30,14 @@ class EntityFilter:
         Args:
             included_domains: List of domains to include (e.g., ['light', 'switch'])
                             If None or empty, all domains are included
-            excluded_entities: List of entity IDs or glob patterns to exclude
-                             (e.g., ['sensor.uptime', 'sensor.*_last_boot'])
+            included_entities: List of entity IDs or glob patterns to include
+                             (e.g., ['light.kitchen', 'switch.*'])
+                             If None or empty, all entities in included domains are included
             excluded_attributes: Dict of attributes that cause exclusion
                                (e.g., {'hidden': True, 'disabled': True})
         """
         self.included_domains = set(included_domains) if included_domains else None
-        self.excluded_entities = excluded_entities or []
+        self.included_entities = included_entities or []
         self.excluded_attributes = excluded_attributes or {}
 
     def should_include_entity(self, entity: Dict[str, Any]) -> bool:
@@ -59,9 +60,15 @@ class EntityFilter:
         if self.included_domains and domain not in self.included_domains:
             return False
 
-        # Check excluded entities (supports glob patterns)
-        for pattern in self.excluded_entities:
-            if fnmatch.fnmatch(entity_id, pattern):
+        # Check included entities allowlist (supports glob patterns)
+        # If the list is non-empty, entity must match at least one pattern
+        if self.included_entities:
+            matched = False
+            for pattern in self.included_entities:
+                if fnmatch.fnmatch(entity_id, pattern):
+                    matched = True
+                    break
+            if not matched:
                 return False
 
         # Check excluded attributes
@@ -130,7 +137,7 @@ class EntityFilter:
         {
             'filters': {
                 'included_domains': ['light', 'switch', ...],
-                'excluded_entities': ['sensor.uptime', ...],
+                'included_entities': ['light.kitchen', 'switch.*', ...],
                 'excluded_attributes': {'hidden': True, ...}
             }
         }
@@ -145,7 +152,7 @@ class EntityFilter:
 
         return EntityFilter(
             included_domains=filters_config.get('included_domains'),
-            excluded_entities=filters_config.get('excluded_entities'),
+            included_entities=filters_config.get('included_entities'),
             excluded_attributes=filters_config.get('excluded_attributes')
         )
 
