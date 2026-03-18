@@ -141,6 +141,13 @@ class PacketQTH:
         # Initialize entity filter and mapper
         filter_config = ha_config.get('entity_filter', {})
 
+        # Warn if old exclusion-based config detected
+        if filter_config.get('exclude_entities') and not filter_config.get('include_entities'):
+            logger.warning(
+                "Detected old exclude_entities config format. "
+                "Run the setup wizard to migrate to the new include_entities format."
+            )
+
         entity_filter = EntityFilter(
             included_domains=filter_config.get('include_domains'),
             included_entities=filter_config.get('include_entities'),
