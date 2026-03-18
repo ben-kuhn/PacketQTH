@@ -136,6 +136,7 @@ class CommandHandler:
         """Handle ON command."""
         entity = self.mapper.get_by_id(command.device_id)
         entity_id = entity['entity_id']
+        domain = entity_id.split('.')[0]
 
         try:
             await self.ha.turn_on(entity_id)
@@ -143,6 +144,9 @@ class CommandHandler:
             # Get friendly name
             name = entity['attributes'].get('friendly_name', entity_id)
 
+            # Use appropriate verb for domain
+            if domain == 'script':
+                return [format_success_message(f"{name} run")]
             return [format_success_message(f"{name} turned on")]
 
         except Exception as e:

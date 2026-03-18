@@ -36,6 +36,7 @@ homeassistant:
       - light
       - switch
       - automation
+      - script
       - cover
       - sensor
       - climate

@@ -39,7 +39,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "token": "${HA_TOKEN}",
         "cache_ttl": 60,
         "entity_filter": {
-            "include_domains": ["light", "switch", "automation", "cover", "sensor", "climate", "fan", "lock"],
+            "include_domains": ["light", "switch", "automation", "script", "cover", "sensor", "climate", "fan", "lock"],
             "exclude_domains": None,
             "include_entities": [],
             "exclude_entities": None,

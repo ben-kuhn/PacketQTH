@@ -152,6 +152,7 @@ N:
 - `FN` - Fan
 - `LK` - Lock
 - `SC` - Scene
+- `SR` - Script
 - `AU` - Automation
 
 **State Indicators:**
