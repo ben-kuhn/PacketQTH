@@ -12,6 +12,7 @@ Interactive TUI wizard for initial configuration. Produces:
 import argparse
 import asyncio
 import copy
+import fnmatch
 import os
 import re
 import sys
@@ -324,6 +325,39 @@ def build_entity_filter(
     return sorted(selected_domains), sorted(include_entities)
 
 
+def migrate_exclusion_to_inclusion(
+    grouped_entities: dict[str, list[str]],
+    include_domains: list[str],
+    exclude_entities: list[str],
+) -> set[str]:
+    """
+    Migrate from old exclusion-based config to new inclusion-based config.
+
+    Takes the old exclude_entities list and computes which entities should be
+    included by removing excluded entities from all entities in included domains.
+
+    Args:
+        grouped_entities: Dict mapping domain to list of entity_ids
+        include_domains: List of domains that were included
+        exclude_entities: List of entity IDs or glob patterns that were excluded
+
+    Returns:
+        Set of entity_ids that should be included (i.e., not excluded)
+    """
+    included = set()
+    for domain in include_domains:
+        for eid in grouped_entities.get(domain, []):
+            # Check if this entity matches any exclusion pattern
+            excluded = False
+            for pattern in exclude_entities:
+                if fnmatch.fnmatch(eid, pattern):
+                    excluded = True
+                    break
+            if not excluded:
+                included.add(eid)
+    return included
+
+
 def step_entity_filter(config: dict, config_path: Path, ha_url: str, ha_token: str) -> None:
     """
     Interactively build entity filter. Skippable if HA unreachable.
@@ -360,6 +394,15 @@ def step_entity_filter(config: dict, config_path: Path, ha_url: str, ha_token: s
     ef = config.get("homeassistant", {}).get("entity_filter", {})
     current_inc_domains = set(ef.get("include_domains") or [])
     current_inc_entities = set(ef.get("include_entities") or [])
+    current_exc_entities = ef.get("exclude_entities") or []
+
+    # Detect old exclusion-based config and migrate to inclusion-based
+    if current_exc_entities and not current_inc_entities:
+        print("\n  Detected old exclusion-based config — migrating to inclusion list...")
+        current_inc_entities = migrate_exclusion_to_inclusion(
+            grouped, list(current_inc_domains), current_exc_entities
+        )
+        print(f"  Migrated {len(current_inc_entities)} entities from exclusion list.")
 
     # Domain selection dialog
     style = Style.from_dict({"dialog": "bg:#1e1e2e", "dialog.body": "bg:#1e1e2e fg:#cdd6f4"})

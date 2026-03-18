@@ -175,6 +175,45 @@ def test_build_entity_filter_includes_all_selected():
     assert sorted(inc_entities) == ["light.hall", "light.kitchen"]
 
 
+def test_migrate_exclusion_to_inclusion_removes_excluded():
+    from tools.configure import migrate_exclusion_to_inclusion
+    grouped = {
+        "light": ["light.kitchen", "light.living_room", "light.bedroom"],
+        "switch": ["switch.fan"],
+    }
+    include_domains = ["light"]
+    exclude_entities = ["light.living_room"]
+    result = migrate_exclusion_to_inclusion(grouped, include_domains, exclude_entities)
+    assert "light.kitchen" in result
+    assert "light.bedroom" in result
+    assert "light.living_room" not in result
+    assert "switch.fan" not in result  # not in include_domains
+
+
+def test_migrate_exclusion_to_inclusion_supports_glob():
+    from tools.configure import migrate_exclusion_to_inclusion
+    grouped = {
+        "sensor": ["sensor.temp", "sensor.last_boot", "sensor.uptime_seconds"],
+    }
+    include_domains = ["sensor"]
+    exclude_entities = ["sensor.*_boot", "sensor.uptime*"]
+    result = migrate_exclusion_to_inclusion(grouped, include_domains, exclude_entities)
+    assert "sensor.temp" in result
+    assert "sensor.last_boot" not in result
+    assert "sensor.uptime_seconds" not in result
+
+
+def test_migrate_exclusion_to_inclusion_empty_exclusions():
+    from tools.configure import migrate_exclusion_to_inclusion
+    grouped = {
+        "light": ["light.kitchen", "light.bedroom"],
+    }
+    include_domains = ["light"]
+    exclude_entities = []
+    result = migrate_exclusion_to_inclusion(grouped, include_domains, exclude_entities)
+    assert result == {"light.kitchen", "light.bedroom"}
+
+
 def test_group_entities_by_domain_groups_and_sorts():
     from tools.configure import group_entities_by_domain
     entities = [
