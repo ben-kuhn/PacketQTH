@@ -289,7 +289,7 @@ PacketQTH is designed to work seamlessly with LinBPQ packet nodes. BPQ mode hand
 When a user connects to an application through LinBPQ:
 
 1. User connects to BPQ node via packet radio
-2. User types command to launch application (e.g., "C PACKETQTH")
+2. User types application name (e.g., "PQTH")
 3. BPQ establishes TCP connection to PacketQTH server
 4. **BPQ automatically sends the user's callsign as the first line**
 5. PacketQTH authenticates and enters command loop
@@ -311,8 +311,8 @@ telnet:
 **User Experience (from BPQ):**
 
 ```
-C PACKETQTH
-Connected to PACKETQTH
+PQTH
+Connected to PQTH
 ╔════════════════════════╗
 ║  PacketQTH v1.0        ║
 ╚════════════════════════╝
@@ -373,26 +373,24 @@ python tools/simulate_bpq.py KN4XYZ
 
 Add PacketQTH to your LinBPQ configuration:
 
+In the telnet port definition, add PacketQTH's port to CMDPORT:
 ```ini
-# In bpq32.cfg or linbpq.conf
+CMDPORT 8023
+```
 
-[LinBPQ]
-...
-
-[Telnet Server]
-...
-CMDPORT 23 63000
-
-APPLICATION 1,PACKETQTH,C 1 HOST 1 S
+In the main section with other APPLICATION lines:
+```ini
+APPLICATION 4,PQTH,C 1 HOST 0 S
 ```
 
 **Configuration explained:**
-- `APPLICATION 1,PACKETQTH` - Application #1 named "PACKETQTH"
-- `C 1` - Command "C" triggers application, index 1
-- `HOST 1` - Connect to host defined in CMDPORT (port 8023)
-- `S` - Return to node on disconnect (optional)
+- `CMDPORT 8023` — defines HOST 0 as port 8023 (add more ports separated by spaces for additional hosts)
+- `APPLICATION 4,PQTH` — application index 4, named "PQTH" (indexes 1-3 are often used by built-in services)
+- `C 1` — connect telnet port 1 to this application (adjust to match your telnet port number)
+- `HOST 0` — connect to the first CMDPORT entry (index 0 = port 8023)
+- `S` — return to node on disconnect
 
-Users connect by typing: `C PACKETQTH` or `C 1`
+Users connect by typing `PQTH`.
 
 ### Automatic Fallback
 

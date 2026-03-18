@@ -16,14 +16,14 @@ Complete guide to using PacketQTH.
 ### Via LinBPQ
 
 1. Connect to your LinBPQ node via packet radio
-2. Use the telnet command to connect to PacketQTH
+2. Type the application name to connect to PacketQTH
 3. LinBPQ will automatically send your callsign
 
 ```
 C KN4XYZ-5
 Connected to KN4XYZ-5
 *** Connected to BPQ
-BPQ> TELNET PACKETQTH
+BPQ> PQTH
 
 PacketQTH v0.1.0
 TOTP Code:

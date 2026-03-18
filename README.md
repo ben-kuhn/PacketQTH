@@ -116,13 +116,26 @@ docker compose logs -f
 
 ### 4. Configure LinBPQ
 
-Add an application entry to your `bpq32.cfg`:
+Add to your `bpq32.cfg`:
 
+In the telnet port definition, add PacketQTH's port to CMDPORT:
 ```
-APPLICATION 10,PACKETQTH,C 10 HOST localhost 8023
+CMDPORT 8023
 ```
 
-Users connect with `C PACKETQTH` or `TELNET PACKETQTH`.
+In the main section with other APPLICATION lines:
+```
+APPLICATION 4,PQTH,C 1 HOST 0 S
+```
+
+**Configuration explained:**
+- `CMDPORT 8023` — defines HOST 0 as port 8023 (add more ports separated by spaces for additional hosts)
+- `APPLICATION 4,PQTH` — application index 4, named "PQTH" (indexes 1-3 are often used by built-in services)
+- `C 1` — connect telnet port 1 to this application (adjust to match your telnet port number)
+- `HOST 0` — connect to the first CMDPORT entry (index 0 = port 8023)
+- `S` — return to node on disconnect
+
+Users connect by typing `PQTH`.
 
 ### 5. Test
 

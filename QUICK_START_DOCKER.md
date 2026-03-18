@@ -109,14 +109,18 @@ Enter a TOTP code from your authenticator app.
 ### 6. Configure LinBPQ
 
 Add to your `bpq32.cfg`:
+
+In the telnet port definition, add PacketQTH's port to CMDPORT:
 ```
-APPLICATION 10,PACKETQTH,C 10 HOST localhost 8023
+CMDPORT 8023
 ```
 
-Restart LinBPQ, then connect:
+In the main section with other APPLICATION lines:
 ```
-C PACKETQTH
+APPLICATION 4,PQTH,C 1 HOST 0 S
 ```
+
+Restart LinBPQ, then connect by typing `PQTH`.
 
 ## Commands
 
