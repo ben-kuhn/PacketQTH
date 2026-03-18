@@ -87,9 +87,9 @@ def format_state(state: str, attributes: Dict[str, Any] = None) -> str:
     except (ValueError, TypeError):
         pass
 
-    # Long state strings - truncate
+    # Long state strings - truncate (use ASCII for packet radio compatibility)
     if len(state) > 6:
-        return state[:5] + '…'
+        return state[:3] + '...'
 
     return state
 
@@ -120,9 +120,9 @@ def format_entity_line(
     # Get friendly name or use entity ID
     name = attributes.get('friendly_name', entity_id.split('.')[-1])
 
-    # Truncate name if needed
+    # Truncate name if needed (use ASCII for packet radio compatibility)
     if len(name) > max_name_len:
-        name = name[:max_name_len - 1] + '…'
+        name = name[:max_name_len - 3] + '...'
 
     # Get abbreviation
     abbrev = get_entity_abbrev(entity_id)
@@ -299,14 +299,14 @@ def format_compact(items: List[str], separator: str = ' ') -> str:
     return separator.join(items)
 
 
-def truncate(text: str, max_length: int, suffix: str = '…') -> str:
+def truncate(text: str, max_length: int, suffix: str = '...') -> str:
     """
     Truncate text to maximum length with suffix.
 
     Args:
         text: Text to truncate
         max_length: Maximum length including suffix
-        suffix: Suffix to add if truncated (default: '…')
+        suffix: Suffix to add if truncated (default: '...')
 
     Returns:
         Truncated text
