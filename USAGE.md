@@ -156,9 +156,9 @@ N:
 - `AU` - Automation
 
 **State Indicators:**
-- `[ON]` - Device is on
-- `[--]` - Device is off
-- `[??]` - State unknown/unavailable
+- `ON` - Device is on
+- `OFF` - Device is off
+- `N/A` - State unknown/unavailable
 - `75%` - Percentage value
 - `72F` - Temperature value
 

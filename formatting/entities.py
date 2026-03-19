@@ -57,13 +57,13 @@ def format_state(state: str, attributes: Dict[str, Any] = None) -> str:
 
     # On/Off states
     if state_lower == 'on':
-        return '[ON]'
+        return 'ON'
     elif state_lower == 'off':
-        return '[--]'
+        return 'OFF'
 
     # Unavailable/Unknown
     elif state_lower in ('unavailable', 'unknown', 'none'):
-        return '[??]'
+        return 'N/A'
 
     # Numeric states (temperature, brightness, position, etc.)
     try:
