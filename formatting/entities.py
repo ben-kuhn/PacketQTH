@@ -97,7 +97,7 @@ def format_state(state: str, attributes: Dict[str, Any] = None) -> str:
 def format_entity_line(
     numeric_id: int,
     entity: Dict[str, Any],
-    max_name_len: int = 12
+    max_name_len: int = 20
 ) -> str:
     """
     Format a single entity as a compact line.
@@ -140,7 +140,7 @@ def format_entity_line(
 def format_entity_list(
     entities: List[Dict[str, Any]],
     start_id: int = 1,
-    max_name_len: int = 12
+    max_name_len: int = 20
 ) -> List[str]:
     """
     Format a list of entities as compact lines.
