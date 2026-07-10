@@ -64,8 +64,8 @@ jobs:
             type=semver,pattern={{major}}
             # Tag latest on main branch
             type=raw,value=latest,enable={{is_default_branch}}
-            # Tag with git SHA
-            type=sha,prefix={{branch}}-
+            # Tag with git SHA (branch pushes only; tag builds already carry semver)
+            type=sha,prefix={{branch}}-,enable=${{ github.ref_type == 'branch' }}
           labels: |
             org.opencontainers.image.title=PacketQTH${{ matrix.image-suffix }}
             org.opencontainers.image.description=${{ matrix.description }}
